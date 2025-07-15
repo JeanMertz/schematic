@@ -427,6 +427,7 @@ impl Container<'_> {
         }
     }
 
+    #[cfg(feature = "schema")]
     pub fn generate_partial_schema(
         &self,
         config_name: &Ident,

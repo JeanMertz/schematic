@@ -23,6 +23,7 @@ expression: "fs::read_to_string(file).unwrap()"
     "nested",
     "number",
     "path",
+    "regex",
     "relPath",
     "string",
     "time",
@@ -31,6 +32,7 @@ expression: "fs::read_to_string(file).unwrap()"
     "uuid",
     "vector",
     "version",
+    "version2",
     "versionReq",
     "yamlValue"
   ],
@@ -131,6 +133,10 @@ expression: "fs::read_to_string(file).unwrap()"
       "type": "string",
       "format": "path"
     },
+    "regex": {
+      "type": "string",
+      "format": "regex"
+    },
     "relPath": {
       "type": "string",
       "format": "path"
@@ -190,6 +196,9 @@ expression: "fs::read_to_string(file).unwrap()"
           "type": "null"
         }
       ]
+    },
+    "version2": {
+      "type": "string"
     },
     "versionReq": {
       "type": "string"

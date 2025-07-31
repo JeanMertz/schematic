@@ -188,6 +188,17 @@ expression: "fs::read_to_string(file).unwrap()"
         }
       ]
     },
+    "regex": {
+      "anyOf": [
+        {
+          "type": "string",
+          "format": "regex"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
     "relPath": {
       "anyOf": [
         {
@@ -274,6 +285,16 @@ expression: "fs::read_to_string(file).unwrap()"
       ]
     },
     "version": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "version2": {
       "anyOf": [
         {
           "type": "string"
@@ -395,6 +416,7 @@ expression: "fs::read_to_string(file).unwrap()"
         "nested",
         "number",
         "path",
+        "regex",
         "relPath",
         "string",
         "time",
@@ -403,6 +425,7 @@ expression: "fs::read_to_string(file).unwrap()"
         "uuid",
         "vector",
         "version",
+        "version2",
         "versionReq",
         "yamlValue"
       ],
@@ -501,6 +524,10 @@ expression: "fs::read_to_string(file).unwrap()"
           "type": "string",
           "format": "path"
         },
+        "regex": {
+          "type": "string",
+          "format": "regex"
+        },
         "relPath": {
           "type": "string",
           "format": "path"
@@ -560,6 +587,9 @@ expression: "fs::read_to_string(file).unwrap()"
               "type": "null"
             }
           ]
+        },
+        "version2": {
+          "type": "string"
         },
         "versionReq": {
           "type": "string"

@@ -1,6 +1,6 @@
 [package]
 name = "schematic"
-version = "0.18.10"
+version = "0.18.12"
 edition = "2024"
 license = "MIT"
 description = "A layered serde configuration and schema library."
@@ -18,8 +18,8 @@ pre-release-replacements = [
 all-features = true
 
 [dependencies]
-schematic_macros = { version = "0.18.8", path = "../macros" }
-schematic_types = { version = "0.10.5", path = "../types" }
+schematic_macros = { version = "0.18.11", path = "../macros" }
+schematic_types = { version = "0.10.6", path = "../types" }
 miette = { workspace = true }
 thiserror = "2.0.12"
 tracing = { workspace = true }
@@ -31,6 +31,10 @@ garde = { version = "0.22.0", default-features = false, optional = true, feature
 serde = { workspace = true }
 serde_path_to_error = { version = "0.1.17", optional = true }
 starbase_styles = { version = "0.6.3", optional = true }
+
+# settings
+regex = { workspace = true, optional = true }
+semver = { workspace = true, optional = true }
 
 # schema
 indexmap = { workspace = true, optional = true, features = ["serde"] }
@@ -93,10 +97,10 @@ renderer_typescript = ["schema"]
 # Types
 type_chrono = ["schematic_types/chrono"]
 type_indexmap = ["schematic_types/indexmap"]
-type_regex = ["schematic_types/regex"]
+type_regex = ["schematic_types/regex", "dep:regex"]
 type_relative_path = ["schematic_types/relative_path"]
 type_rust_decimal = ["schematic_types/rust_decimal", "garde?/rust_decimal"]
-type_semver = ["schematic_types/semver"]
+type_semver = ["schematic_types/semver", "dep:semver"]
 type_url = ["schematic_types/url"]
 type_uuid = ["schematic_types/uuid"]
 
@@ -145,7 +149,6 @@ derive_more = { version = "2.0.1", features = ["try_into", "as_ref"] }
 # Types
 chrono = { workspace = true, features = ["serde"] }
 indexmap = { workspace = true }
-regex = { workspace = true }
 relative-path = { workspace = true, features = ["serde"] }
 rust_decimal = { workspace = true }
 semver = { workspace = true, features = ["serde"] }

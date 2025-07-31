@@ -5,6 +5,7 @@ use crate::utils::{extract_common_attrs, format_case, preserve_str_literal};
 use darling::FromAttributes;
 use proc_macro2::{Ident, TokenStream};
 use quote::{ToTokens, quote};
+use std::collections::HashSet;
 use syn::{Attribute, Expr, ExprPath, Field as NativeField, Type};
 
 // #[serde()]
@@ -77,7 +78,7 @@ pub struct Field<'l> {
 }
 
 impl Field<'_> {
-    pub fn from(field: &NativeField) -> Field {
+    pub fn from(field: &NativeField) -> Field<'_> {
         let args = FieldArgs::from_attributes(&field.attrs).unwrap_or_default();
         let serde_args = FieldSerdeArgs::from_attributes(&field.attrs).unwrap_or_default();
 
@@ -160,6 +161,20 @@ impl Field<'_> {
         }
     }
 
+    pub fn get_aliases(&self) -> Vec<String> {
+        let mut aliases = HashSet::new();
+
+        if let Some(alias) = &self.args.alias {
+            aliases.insert(alias.to_owned());
+        }
+
+        if let Some(alias) = &self.serde_args.alias {
+            aliases.insert(alias.to_owned());
+        }
+
+        aliases.into_iter().collect()
+    }
+
     pub fn get_env_var(&self) -> Option<String> {
         if self.is_nested() {
             return None;
@@ -236,9 +251,11 @@ impl Field<'_> {
     pub fn generate_schema_type(&self, as_field: bool) -> TokenStream {
         use crate::utils::{
             extract_comment, extract_deprecated, map_bool_field_quote, map_option_field_quote,
+            map_vec_field_quote,
         };
         use syn::Lit;
 
+        let aliases = map_vec_field_quote("aliases", self.get_aliases());
         let hidden = map_bool_field_quote("hidden", self.is_skipped());
         let nullable = map_bool_field_quote("nullable", self.is_nullable());
         let optional = map_bool_field_quote("optional", self.is_optional());
@@ -281,7 +298,8 @@ impl Field<'_> {
         // Struct field (named)
         if as_field {
             let name = self.get_name(Some(&self.casing_format));
-            let value = if comment.is_none()
+            let value = if aliases.is_none()
+                && comment.is_none()
                 && deprecated.is_none()
                 && env_var.is_none()
                 && hidden.is_none()
@@ -295,6 +313,7 @@ impl Field<'_> {
                 quote! {
                     {
                         let mut field = SchemaField::new(#inner_schema);
+                        #aliases
                         #comment
                         #deprecated
                         #env_var
@@ -318,9 +337,8 @@ impl Field<'_> {
             } else {
                 quote! {
                     {
-                        let mut schema = #inner_schema;
                         #description
-                        schema
+                        #inner_schema
                     }
                 }
             }

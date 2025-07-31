@@ -51,6 +51,7 @@ export interface GenConfig {
 	nested: AnotherConfig;
 	number: number;
 	path: string;
+	regex: string;
 	relPath: string;
 	string: string;
 	time: string;
@@ -60,6 +61,7 @@ export interface GenConfig {
 	/** This is a list of strings. */
 	vector: string[];
 	version: string | null;
+	version2: string;
 	versionReq: string;
 	yamlValue: unknown;
 }
@@ -100,6 +102,7 @@ export interface PartialGenConfig {
 	nested?: PartialAnotherConfig | null;
 	number?: number | null;
 	path?: string | null;
+	regex?: string | null;
 	relPath?: string | null;
 	string?: string | null;
 	time?: string | null;
@@ -109,6 +112,7 @@ export interface PartialGenConfig {
 	/** This is a list of strings. */
 	vector?: string[] | null;
 	version?: string | null;
+	version2?: string | null;
 	versionReq?: string | null;
 	yamlValue?: unknown | null;
 }

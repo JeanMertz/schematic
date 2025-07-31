@@ -82,7 +82,7 @@ impl Field<'_> {
         let args = FieldArgs::from_attributes(&field.attrs).unwrap_or_default();
         let serde_args = FieldSerdeArgs::from_attributes(&field.attrs).unwrap_or_default();
 
-        let field = Field {
+        Field {
             name: field.ident.as_ref(),
             index: 0,
             attrs: extract_common_attrs(&field.attrs),
@@ -96,13 +96,7 @@ impl Field<'_> {
             args,
             serde_args,
             env_prefix: None,
-        };
-
-        if field.is_required() && !field.is_nullable() {
-            panic!("Cannot use required with non-optional settings.");
         }
-
-        field
     }
 
     #[cfg(feature = "schema")]

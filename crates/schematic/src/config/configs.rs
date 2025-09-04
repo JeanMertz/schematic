@@ -14,6 +14,14 @@ pub trait PartialConfig:
 {
     type Context: Default;
 
+    /// Return an empty partial configuration.
+    ///
+    /// Returns [`None`] if the configuration cannot be empty, such as an enum.
+    fn empty() -> Option<Self>;
+
+    /// Return whether the configuration is empty.
+    fn is_empty(&self) -> bool;
+
     /// Return a partial configuration with values populated with default values for settings
     /// marked with `#[setting(default)]`. Unmarked settings will be [`None`].
     ///

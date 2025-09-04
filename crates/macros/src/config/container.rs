@@ -3,6 +3,37 @@ use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 
 impl Container<'_> {
+    pub fn generate_empty_values(&self) -> TokenStream {
+        match self {
+            Self::NamedStruct {
+                fields: settings, ..
+            } => {
+                let mut setting_names = vec![];
+                let mut setting_values = vec![];
+                for setting in settings {
+                    setting_names.push(setting.name);
+                    setting_values.push(setting.generate_empty_value());
+                }
+
+                quote! {
+                    Some(Self {
+                        #(#setting_names: #setting_values),*
+                    })
+                }
+            }
+            Self::UnnamedStruct {
+                fields: settings, ..
+            } => {
+                let none_values = settings.iter().map(|_| quote! { None });
+
+                quote! { Some(Self(#(#none_values),*)) }
+            }
+            Self::Enum { .. } => {
+                quote! { None }
+            }
+        }
+    }
+
     pub fn generate_default_values(&self) -> TokenStream {
         match self {
             Self::NamedStruct {
@@ -311,6 +342,35 @@ impl Container<'_> {
                     }
                 }
             }
+        }
+    }
+
+    pub fn generate_is_empty_impl(&self) -> TokenStream {
+        let mut checks = vec![];
+
+        match self {
+            Self::NamedStruct {
+                fields: settings, ..
+            } => {
+                for setting in settings {
+                    checks.push(setting.generate_is_empty());
+                }
+            }
+            Self::UnnamedStruct {
+                fields: settings, ..
+            } => {
+                for setting in settings {
+                    checks.push(setting.generate_is_empty());
+                }
+            }
+            Self::Enum { .. } => {
+                checks.push(quote! { true });
+            }
+        }
+
+        quote! {
+            #(#checks) && *
+            // false
         }
     }
 

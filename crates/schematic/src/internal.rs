@@ -17,6 +17,12 @@ pub fn track_env<T>(value: Option<T>, tracker: &mut std::collections::HashSet<bo
 }
 
 #[cfg(feature = "env")]
+pub fn track_env_nested<T>(value: T, tracker: &mut std::collections::HashSet<bool>) -> T {
+    tracker.insert(true);
+    value
+}
+
+#[cfg(feature = "env")]
 pub fn default_env_value<T: FromStr>(key: &str) -> crate::config::ParseEnvResult<T> {
     parse_env_value(key, |value| parse_value(value).map(|v| Some(v)))
 }
@@ -61,7 +67,7 @@ pub fn merge_setting<T, C>(
 }
 
 #[allow(clippy::unnecessary_unwrap)]
-pub fn merge_nested_setting<T: PartialConfig>(
+pub fn merge_nested_optional_setting<T: PartialConfig>(
     prev: Option<T>,
     next: Option<T>,
     context: &T::Context,
@@ -75,6 +81,27 @@ pub fn merge_nested_setting<T: PartialConfig>(
 
         Ok(Some(nested))
     } else if next.is_some() {
+        Ok(next)
+    } else {
+        Ok(prev)
+    }
+}
+
+#[allow(clippy::unnecessary_unwrap)]
+pub fn merge_nested_setting<T: PartialConfig>(
+    prev: T,
+    next: T,
+    context: &T::Context,
+) -> std::result::Result<T, MergeError> {
+    if !prev.is_empty() && next.is_empty() {
+        let mut nested = prev;
+
+        nested
+            .merge(context, next)
+            .map_err(|error| MergeError(error.to_string()))?;
+
+        Ok(nested)
+    } else if !next.is_empty() {
         Ok(next)
     } else {
         Ok(prev)

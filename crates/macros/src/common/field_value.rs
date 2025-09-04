@@ -25,7 +25,7 @@ fn extract_inner_type<'a>(ty: &'a Type, info: &mut TypeInfo) -> &'a Type {
     // instead of the full path `std::option::Option`
     let last_segment = type_path.path.segments.last().unwrap();
 
-    // If a collecion type, return the path immediately, as we'll need
+    // If a collection type, return the path immediately, as we'll need
     // to extract inner information later on
     if is_collection_type(&last_segment.ident) {
         return ty;
@@ -197,12 +197,16 @@ impl<'l> FieldValue<'l> {
             _ => None,
         }
     }
+
+    pub fn is_container(&self) -> bool {
+        matches!(self, Self::NestedMap { .. } | Self::NestedList { .. })
+    }
 }
 
 // Only used for partials!!!
 impl ToTokens for FieldValue<'_> {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        let inner = match self {
+        tokens.extend(match self {
             Self::NestedList {
                 collection, item, ..
             } => {
@@ -218,20 +222,16 @@ impl ToTokens for FieldValue<'_> {
                     #collection<#key, <#value as schematic::Config>::Partial>
                 }
             }
-            Self::NestedValue { value, .. } => {
-                quote! { <#value as schematic::Config>::Partial }
+            Self::NestedValue { value, info } => {
+                if info.optional {
+                    quote! { Option<<#value as schematic::Config>::Partial> }
+                } else {
+                    quote! { <#value as schematic::Config>::Partial }
+                }
             }
             Self::Value { value, .. } => {
-                quote! { #value }
+                quote! { Option<#value> }
             }
-        };
-
-        // Boxes are ignored for the partial type,
-        // and will only be used for the final type!
-        // if self.is_boxed() {
-        //     inner = quote! { Box<#inner> };
-        // }
-
-        tokens.extend(quote! { Option<#inner> })
+        });
     }
 }

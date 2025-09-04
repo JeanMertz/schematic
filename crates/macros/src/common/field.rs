@@ -9,7 +9,7 @@ use std::collections::HashSet;
 use syn::{Attribute, Expr, ExprPath, Field as NativeField, Type};
 
 // #[serde()]
-#[derive(FromAttributes, Default)]
+#[derive(FromAttributes, Default, Debug)]
 #[darling(default, allow_unknown_fields, attributes(serde))]
 pub struct FieldSerdeArgs {
     pub alias: Option<String>,
@@ -33,7 +33,7 @@ impl FieldSerdeArgs {
 }
 
 // #[schema()], #[setting()]
-#[derive(FromAttributes, Default)]
+#[derive(FromAttributes, Default, Debug)]
 #[darling(default, attributes(schema, setting))]
 pub struct FieldArgs {
     // schema
@@ -65,6 +65,7 @@ pub struct FieldArgs {
     pub skip_serializing: bool,
 }
 
+#[derive(Debug)]
 pub struct Field<'l> {
     pub args: FieldArgs,
     pub serde_args: FieldSerdeArgs,
@@ -115,6 +116,10 @@ impl Field<'_> {
 
     pub fn is_nullable(&self) -> bool {
         self.value_type.is_outer_optional()
+    }
+
+    pub fn is_container(&self) -> bool {
+        self.value_type.is_container()
     }
 
     #[cfg(feature = "schema")]
@@ -224,7 +229,38 @@ impl Field<'_> {
             if self.args.skip_serializing || self.serde_args.skip_serializing {
                 meta.push(quote! { skip_serializing });
             } else {
-                meta.push(quote! { skip_serializing_if = "Option::is_none" });
+                let tokens = match &self.value_type {
+                    FieldValue::NestedMap {
+                        collection,
+                        collection_info,
+                        ..
+                    }
+                    | FieldValue::NestedList {
+                        collection,
+                        collection_info,
+                        ..
+                    } => {
+                        if collection_info.optional {
+                            quote! { skip_serializing_if = "Option::is_none" }
+                        } else {
+                            let name = collection.to_string();
+                            let fmt = format!("{name}::is_empty");
+                            quote! { skip_serializing_if = #fmt }
+                        }
+                    }
+                    FieldValue::NestedValue { info, .. } => {
+                        if info.optional {
+                            quote! { skip_serializing_if = "Option::is_none" }
+                        } else {
+                            quote! { skip_serializing_if = "::schematic::PartialConfig::is_empty" }
+                        }
+                    }
+                    FieldValue::Value { .. } => {
+                        quote! { skip_serializing_if = "Option::is_none" }
+                    }
+                };
+
+                meta.push(tokens);
             }
 
             if self.args.skip_deserializing || self.serde_args.skip_deserializing {

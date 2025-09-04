@@ -4,6 +4,36 @@ use quote::{format_ident, quote};
 use syn::{Expr, Lit};
 
 impl FieldValue<'_> {
+    pub fn generate_empty_value(&self) -> TokenStream {
+        match self {
+            Self::NestedMap {
+                collection,
+                collection_info,
+                ..
+            }
+            | Self::NestedList {
+                collection,
+                collection_info,
+                ..
+            } => {
+                if collection_info.optional {
+                    quote! { None }
+                } else {
+                    quote! { #collection::default() }
+                }
+            }
+            Self::NestedValue { info, .. } => {
+                if info.optional {
+                    quote! { None }
+                } else {
+                    let partial_name = format_ident!("Partial{}", info.config.as_ref().unwrap());
+                    quote! { #partial_name::empty()? }
+                }
+            }
+            Self::Value { .. } => quote! { None },
+        }
+    }
+
     pub fn generate_default_value(
         &self,
         args: &FieldArgs,
@@ -44,12 +74,18 @@ impl FieldValue<'_> {
                 }
             },
             _ => {
-                if nullable || required {
+                if nullable {
                     quote! { None }
                 } else if nested {
-                    quote! { #value::default_values(context)? }
+                    if required {
+                        quote! { #value::default() }
+                    } else {
+                        quote! { #value::default_values(context)?.unwrap_or_default() }
+                    }
+                } else if required {
+                    quote! { None }
                 } else {
-                    quote! { Some(Default::default()) }
+                    quote! { Default::default() }
                 }
             }
         }
@@ -60,7 +96,11 @@ impl FieldValue<'_> {
             Self::NestedValue { info, .. } => {
                 let partial_name = format_ident!("Partial{}", info.config.as_ref().unwrap());
 
-                Some(quote! { track_env(#partial_name::env_values()?, &mut tracker) })
+                Some(if info.optional {
+                    quote! { track_env(#partial_name::env_values()?, &mut tracker) }
+                } else {
+                    quote! { track_env(#partial_name::env_values()?, &mut tracker).unwrap_or_default() }
+                })
             }
             Self::Value { .. } => Some(match &args.parse_env {
                 Some(parse_env) => {
@@ -75,15 +115,6 @@ impl FieldValue<'_> {
                 }
             }),
             _ => None,
-        }
-    }
-    pub fn get_finalize_value(&self) -> Option<TokenStream> {
-        match self {
-            Self::NestedList { .. } | Self::NestedMap { .. } => {
-                Some(self.map_data(quote! { value.finalize(context)? }))
-            }
-            Self::NestedValue { .. } => Some(self.map_data(quote! { data.finalize(context)? })),
-            Self::Value { .. } => None,
         }
     }
 
@@ -117,38 +148,90 @@ impl FieldValue<'_> {
     }
 
     pub fn get_merge_statement(&self, key: TokenStream, args: &FieldArgs) -> TokenStream {
-        if let Self::NestedValue { .. } = self {
-            if args.merge.is_some() {
-                panic!("Nested configs do not support `merge` unless wrapped in a collection.");
-            }
-
-            return quote! {
-                self.#key = merge_nested_setting(
-                    self.#key.take(),
-                    next.#key.take(),
-                    context,
-                )?;
-            };
-        };
-
-        match args.merge.as_ref() {
-            Some(func) => {
-                quote! {
-                    self.#key = merge_setting(
-                        self.#key.take(),
-                        next.#key.take(),
-                        context,
-                        #func,
-                    )?;
+        match self {
+            Self::NestedValue { info, .. } => {
+                if args.merge.is_some() {
+                    panic!("Nested configs do not support `merge` unless wrapped in a collection.");
                 }
-            }
-            _ => {
-                quote! {
-                    if next.#key.is_some() {
-                        self.#key = next.#key;
+
+                if info.optional {
+                    quote! {
+                        self.#key = merge_nested_optional_setting(
+                            self.#key.take(),
+                            next.#key.take(),
+                            context,
+                        )?;
+                    }
+                } else {
+                    quote! {
+                        self.#key = merge_nested_setting(
+                            std::mem::take(&mut self.#key),
+                            std::mem::take(&mut next.#key),
+                            context,
+                        )?;
                     }
                 }
             }
+            Self::NestedList {
+                collection_info, ..
+            }
+            | Self::NestedMap {
+                collection_info, ..
+            } => match args.merge.as_ref() {
+                Some(func) => {
+                    if collection_info.optional {
+                        quote! {
+                            self.#key = merge_setting(
+                                self.#key.take(),
+                                next.#key.take(),
+                                context,
+                                #func,
+                            )?;
+                        }
+                    } else {
+                        quote! {
+                            self.#key = merge_setting(
+                                std::mem::take(&mut self.#key),
+                                std::mem::take(&mut next.#key),
+                                context,
+                                #func,
+                            )?;
+                        }
+                    }
+                }
+                _ => {
+                    if collection_info.optional {
+                        quote! {
+                            if next.#key.is_some() {
+                                self.#key = next.#key;
+                            }
+                        }
+                    } else {
+                        quote! {
+                            self.#key = next.#key;
+                        }
+                    }
+                }
+            },
+            Self::Value { .. } => match args.merge.as_ref() {
+                Some(func) => {
+                    quote! {
+                        self.#key = merge_setting(
+                            self.#key.take(),
+                            next.#key.take(),
+                            context,
+                            #func,
+                        )?;
+                    }
+                }
+                _ => {
+                    quote! {
+                        if next.#key.is_some() {
+                            self.#key = next.#key;
+                        }
+                    }
+                }
+            },
         }
     }
 

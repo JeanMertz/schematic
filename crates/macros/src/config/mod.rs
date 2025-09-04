@@ -26,6 +26,8 @@ impl ToTokens for ConfigMacro<'_> {
 
         // Generate implementations
         let default_values = cfg.type_of.generate_default_values();
+        let empty_values = cfg.type_of.generate_empty_values();
+        let is_empty_impl = cfg.type_of.generate_is_empty_impl();
         let finalize = cfg.type_of.generate_finalize();
         let merge = cfg.type_of.generate_merge();
         let from_partial = cfg.type_of.generate_from_partial(&partial_name);
@@ -96,6 +98,15 @@ impl ToTokens for ConfigMacro<'_> {
             #[automatically_derived]
             impl schematic::PartialConfig for #partial_name {
                 type Context = #context;
+
+                #instrument
+                fn empty() -> Option<Self> {
+                    #empty_values
+                }
+
+                fn is_empty(&self) -> bool {
+                    #is_empty_impl
+                }
 
                 #instrument
                 fn default_values(context: &Self::Context) -> std::result::Result<Option<Self>, schematic::ConfigError> {

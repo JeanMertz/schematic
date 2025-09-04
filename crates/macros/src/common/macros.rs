@@ -47,7 +47,7 @@ pub struct MacroArgs {
     pub serde: SerdeMeta,
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct PartialAttr {
     meta: Vec<NestedMeta>,
 }

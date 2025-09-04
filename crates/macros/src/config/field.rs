@@ -8,6 +8,20 @@ impl Field<'_> {
             .generate_default_value(&self.args, self.is_nullable(), self.is_required())
     }
 
+    pub fn generate_empty_value(&self) -> TokenStream {
+        self.value_type.generate_empty_value()
+    }
+
+    pub fn generate_is_empty(&self) -> TokenStream {
+        let key = self.get_field_key();
+
+        if (self.is_nested() || self.is_container()) && !self.is_nullable() {
+            quote! { self.#key.is_empty() }
+        } else {
+            quote! { self.#key.is_none() }
+        }
+    }
+
     #[cfg(not(feature = "env"))]
     pub fn generate_env_statement(&self) -> Option<TokenStream> {
         None
@@ -40,29 +54,61 @@ impl Field<'_> {
     pub fn generate_finalize_statement(&self) -> TokenStream {
         let key = self.get_field_key();
 
-        match (self.value_type.get_finalize_value(), &self.args.transform) {
-            (Some(value), Some(func)) => {
-                quote! {
-                    if let Some(data) = partial.#key {
-                        partial.#key = Some(#func(#value, context)?);
-                    }
-                }
-            }
-            (Some(value), None) => {
-                quote! {
-                    if let Some(data) = partial.#key {
-                        partial.#key = Some(#value);
-                    }
-                }
-            }
-            (None, Some(func)) => {
+        match (&self.value_type, &self.args.transform) {
+            (FieldValue::Value { .. }, None) => quote! {},
+            (FieldValue::Value { .. }, Some(func)) => {
                 quote! {
                     if let Some(data) = partial.#key {
                         partial.#key = Some(#func(data, context)?);
                     }
                 }
             }
-            _ => quote! {},
+            (field, func) => {
+                let (value, nullable) = match field {
+                    FieldValue::NestedList {
+                        collection_info, ..
+                    }
+                    | FieldValue::NestedMap {
+                        collection_info, ..
+                    } => (
+                        Some(field.map_data(quote! { value.finalize(context)? })),
+                        collection_info.optional,
+                    ),
+                    FieldValue::NestedValue { info, .. } => (
+                        Some(field.map_data(quote! { data.finalize(context)? })),
+                        info.optional,
+                    ),
+                    FieldValue::Value { .. } => unreachable!(),
+                };
+
+                if let Some(func) = func {
+                    if nullable {
+                        quote! {
+                            if let Some(data) = partial.#key {
+                                partial.#key = Some(#func(data, context)?);
+                            }
+                        }
+                    } else {
+                        quote! {
+                            let data = partial.#key;
+                            partial.#key = #func(#value, context)?;
+                        }
+                    }
+                } else {
+                    if nullable {
+                        quote! {
+                            if let Some(data) = partial.#key {
+                                partial.#key = Some(#value);
+                            }
+                        }
+                    } else {
+                        quote! {
+                            let data = partial.#key;
+                            partial.#key = #value;
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -111,6 +157,13 @@ impl Field<'_> {
                         Some(#value)
                     } else {
                         None
+                    }
+                }
+            } else if self.is_nested() {
+                quote! {
+                    {
+                        let data = partial.#key;
+                        #value
                     }
                 }
             } else {

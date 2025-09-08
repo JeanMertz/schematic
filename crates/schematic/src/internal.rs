@@ -93,7 +93,7 @@ pub fn merge_nested_setting<T: PartialConfig>(
     next: T,
     context: &T::Context,
 ) -> std::result::Result<T, MergeError> {
-    if !prev.is_empty() && next.is_empty() {
+    if !prev.is_empty() && !next.is_empty() {
         let mut nested = prev;
 
         nested

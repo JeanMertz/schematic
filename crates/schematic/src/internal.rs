@@ -67,6 +67,19 @@ pub fn merge_setting<T, C>(
 }
 
 #[allow(clippy::unnecessary_unwrap)]
+pub fn merge_nested_map_setting<T: Default, C>(
+    prev: T,
+    next: T,
+    context: &C,
+    merger: impl Fn(T, T, &C) -> MergeResult<T>,
+) -> Result<T, MergeError> {
+    match merger(prev, next, context)? {
+        Some(value) => Ok(value),
+        None => Ok(T::default()),
+    }
+}
+
+#[allow(clippy::unnecessary_unwrap)]
 pub fn merge_nested_optional_setting<T: PartialConfig>(
     prev: Option<T>,
     next: Option<T>,

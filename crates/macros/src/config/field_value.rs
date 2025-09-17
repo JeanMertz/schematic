@@ -190,7 +190,7 @@ impl FieldValue<'_> {
                         }
                     } else {
                         quote! {
-                            self.#key = merge_setting(
+                            self.#key = merge_nested_map_setting(
                                 std::mem::take(&mut self.#key),
                                 std::mem::take(&mut next.#key),
                                 context,

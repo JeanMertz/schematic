@@ -37,62 +37,54 @@ pub fn prepend_vec<T, C>(prev: Vec<T>, next: Vec<T>, _: &C) -> MergeResult<Vec<T
 
 /// Shallow merge the next [`BTreeMap`] into the previous [`BTreeMap`]. Any items in the
 /// next [`BTreeMap`] will overwrite items in the previous [`BTreeMap`] of the same key.
+#[deprecated(note = "Use `merge_iter` instead")]
 pub fn merge_btreemap<K, V, C>(
-    mut prev: BTreeMap<K, V>,
+    prev: BTreeMap<K, V>,
     next: BTreeMap<K, V>,
-    _: &C,
+    c: &C,
 ) -> MergeResult<BTreeMap<K, V>>
 where
     K: Eq + Hash + Ord,
 {
-    for (key, value) in next {
-        prev.insert(key, value);
-    }
-
-    Ok(Some(prev))
+    merge_iter(prev, next, c)
 }
 
 /// Shallow merge the next [`BTreeSet`] into the previous [`BTreeSet`], overwriting duplicates.
-pub fn merge_btreeset<T, C>(
-    mut prev: BTreeSet<T>,
-    next: BTreeSet<T>,
-    _: &C,
-) -> MergeResult<BTreeSet<T>>
+#[deprecated(note = "Use `merge_iter` instead")]
+pub fn merge_btreeset<T, C>(prev: BTreeSet<T>, next: BTreeSet<T>, c: &C) -> MergeResult<BTreeSet<T>>
 where
     T: Eq + Hash + Ord,
 {
-    for item in next {
-        prev.insert(item);
-    }
-
-    Ok(Some(prev))
+    merge_iter(prev, next, c)
 }
 
 /// Shallow merge the next [`HashMap`] into the previous [`HashMap`]. Any items in the
 /// next [`HashMap`] will overwrite items in the previous [`HashMap`] of the same key.
+#[deprecated(note = "Use `merge_iter` instead")]
 pub fn merge_hashmap<K, V, C>(
-    mut prev: HashMap<K, V>,
+    prev: HashMap<K, V>,
     next: HashMap<K, V>,
-    _: &C,
+    c: &C,
 ) -> MergeResult<HashMap<K, V>>
 where
     K: Eq + Hash,
 {
-    for (key, value) in next {
-        prev.insert(key, value);
-    }
-
-    Ok(Some(prev))
+    merge_iter(prev, next, c)
 }
 
 /// Shallow merge the next [`HashSet`] into the previous [`HashSet`], overwriting duplicates.
-pub fn merge_hashset<T, C>(mut prev: HashSet<T>, next: HashSet<T>, _: &C) -> MergeResult<HashSet<T>>
+#[deprecated(note = "Use `merge_iter` instead")]
+pub fn merge_hashset<T, C>(prev: HashSet<T>, next: HashSet<T>, c: &C) -> MergeResult<HashSet<T>>
 where
     T: Eq + Hash,
 {
-    for item in next {
-        prev.insert(item);
-    }
+    merge_iter(prev, next, c)
+}
 
+pub fn merge_iter<M, A, C>(mut prev: M, next: M, _: &C) -> MergeResult<M>
+where
+    M: Extend<A> + IntoIterator<Item = A>,
+{
+    prev.extend(next);
     Ok(Some(prev))
 }

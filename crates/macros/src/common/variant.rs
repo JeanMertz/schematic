@@ -38,6 +38,7 @@ pub struct VariantArgs {
     pub skip_deserializing: bool,
     pub skip_serializing: bool,
     pub untagged: bool,
+    pub with: Option<String>,
 }
 
 pub struct Variant<'l> {
@@ -111,6 +112,10 @@ impl Variant<'_> {
                     meta.push(quote! { rename = #rename });
                 }
             }
+        }
+
+        if let Some(with) = &self.args.with {
+            meta.push(quote! { with = #with });
         }
 
         let mut skipped = false;

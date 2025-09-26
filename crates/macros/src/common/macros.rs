@@ -39,6 +39,7 @@ pub struct MacroArgs {
     pub partial: PartialAttr,
     #[cfg(feature = "env")]
     pub env_prefix: Option<String>,
+    pub default: bool,
 
     // serde
     pub rename: Option<String>,

@@ -34,7 +34,6 @@ impl ToTokens for ConfigMacro<'_> {
         let settings_metadata = cfg.type_of.generate_settings_metadata();
         let instrument = instrument_quote();
 
-        let is_any_required_and_non_nullable = cfg.type_of.has_non_nullable_required();
 
         let context = match cfg.args.context.as_ref() {
             Some(ctx) => quote! { #ctx },
@@ -152,7 +151,7 @@ impl ToTokens for ConfigMacro<'_> {
             }
         });
 
-        if !is_any_required_and_non_nullable {
+        if cfg.args.default {
             tokens.extend(quote! {
                 #[automatically_derived]
                 impl Default for #name {

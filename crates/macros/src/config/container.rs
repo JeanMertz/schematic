@@ -16,9 +16,9 @@ impl Container<'_> {
                 }
 
                 quote! {
-                    Some(Self {
+                    Self {
                         #(#setting_names: #setting_values),*
-                    })
+                    }
                 }
             }
             Self::UnnamedStruct {
@@ -26,11 +26,64 @@ impl Container<'_> {
             } => {
                 let none_values = settings.iter().map(|_| quote! { None });
 
-                quote! { Some(Self(#(#none_values),*)) }
+                quote! { Self(#(#none_values),*) }
             }
-            Self::Enum { .. } => {
-                quote! { None }
+            Self::Enum { variants } => {
+                let empty = variants.iter().filter(|v| v.is_empty()).collect::<Vec<_>>();
+
+                let default = variants.iter().find(|v| v.is_default());
+
+                let variant = if empty.is_empty() {
+                    default.expect("No variant has been marked as `empty` or `default`.")
+                } else if empty.len() > 1 {
+                    panic!("Only 1 variant may be marked as `empty`.");
+                } else if default.is_some() && !empty.is_empty() {
+                    panic!("`empty` not allowed when `default` is present.");
+                } else {
+                    empty[0]
+                };
+
+                let value = variant.generate_empty_value();
+
+                quote! { Self::#value }
             }
+        }
+    }
+
+    pub fn generate_is_empty_impl(&self) -> TokenStream {
+        let mut checks = vec![];
+
+        match self {
+            Self::NamedStruct {
+                fields: settings, ..
+            } => {
+                for setting in settings {
+                    checks.push(setting.generate_is_empty());
+                }
+            }
+            Self::UnnamedStruct {
+                fields: settings, ..
+            } => {
+                for setting in settings {
+                    checks.push(setting.generate_is_empty());
+                }
+            }
+            Self::Enum { variants } => {
+                let is_empty_stmts = variants
+                    .iter()
+                    .map(|s| s.generate_is_empty())
+                    .collect::<Vec<_>>();
+
+                checks.push(quote! {
+                    match self {
+                        #(#is_empty_stmts)*
+                    }
+                });
+            }
+        }
+
+        quote! {
+            #(#checks) && *
         }
     }
 
@@ -342,35 +395,6 @@ impl Container<'_> {
                     }
                 }
             }
-        }
-    }
-
-    pub fn generate_is_empty_impl(&self) -> TokenStream {
-        let mut checks = vec![];
-
-        match self {
-            Self::NamedStruct {
-                fields: settings, ..
-            } => {
-                for setting in settings {
-                    checks.push(setting.generate_is_empty());
-                }
-            }
-            Self::UnnamedStruct {
-                fields: settings, ..
-            } => {
-                for setting in settings {
-                    checks.push(setting.generate_is_empty());
-                }
-            }
-            Self::Enum { .. } => {
-                checks.push(quote! { true });
-            }
-        }
-
-        quote! {
-            #(#checks) && *
-            // false
         }
     }
 

@@ -31,6 +31,7 @@ pub struct VariantArgs {
     pub required: bool,
     #[cfg(feature = "validate")]
     pub validate: Option<syn::Expr>,
+    pub empty: bool,
 
     // serde
     pub rename: Option<String>,
@@ -79,6 +80,10 @@ impl Variant<'_> {
 
     pub fn is_required(&self) -> bool {
         self.args.required
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.args.empty
     }
 
     pub fn get_name(&self, casing_format: Option<&str>) -> String {

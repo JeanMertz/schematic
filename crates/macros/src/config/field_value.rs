@@ -27,7 +27,7 @@ impl FieldValue<'_> {
                     quote! { None }
                 } else {
                     let partial_name = format_ident!("Partial{}", info.config.as_ref().unwrap());
-                    quote! { #partial_name::empty()? }
+                    quote! { #partial_name::empty() }
                 }
             }
             Self::Value { .. } => quote! { None },

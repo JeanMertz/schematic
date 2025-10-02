@@ -16,8 +16,9 @@ pub trait PartialConfig:
 
     /// Return an empty partial configuration.
     ///
-    /// Returns [`None`] if the configuration cannot be empty, such as an enum.
-    fn empty() -> Option<Self>;
+    /// An empty partial with nested fields should have all nested fields
+    /// populated, with the leaves set to [`None`].
+    fn empty() -> Self;
 
     /// Return whether the configuration is empty.
     fn is_empty(&self) -> bool;

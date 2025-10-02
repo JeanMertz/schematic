@@ -99,7 +99,7 @@ impl ToTokens for ConfigMacro<'_> {
                 type Context = #context;
 
                 #instrument
-                fn empty() -> Option<Self> {
+                fn empty() -> Self {
                     #empty_values
                 }
 

@@ -24,6 +24,50 @@ impl Variant<'_> {
         }
     }
 
+    pub fn generate_is_empty(&self) -> TokenStream {
+        let name = &self.name;
+        let is_empty = self.is_empty() || self.is_default();
+
+        match &self.value.fields {
+            Fields::Named(_) => unreachable!(),
+            Fields::Unnamed(_) => {
+                if !is_empty {
+                    quote! { Self::#name(..) => false, }
+                } else if self.is_nested() {
+                    quote! { Self::#name(v) => v.is_empty(), }
+                } else {
+                    quote! { Self::#name(..) => true, }
+                }
+            }
+            Fields::Unit => quote! { Self::#name => #is_empty, },
+        }
+    }
+
+    pub fn generate_empty_value(&self) -> TokenStream {
+        let name = &self.name;
+
+        match &self.value.fields {
+            Fields::Named(_) => unreachable!(),
+            Fields::Unnamed(fields) => {
+                let fields = fields
+                    .unnamed
+                    .iter()
+                    .map(|v| {
+                        if self.is_nested() {
+                            let ty = &v.ty;
+                            quote! { <#ty as schematic::Config>::Partial::empty() }
+                        } else {
+                            quote! { Default::default() }
+                        }
+                    })
+                    .collect::<Vec<_>>();
+
+                quote! { #name(#(#fields),*) }
+            }
+            Fields::Unit => quote! { #name },
+        }
+    }
+
     pub fn generate_finalize_statement(&self) -> Option<TokenStream> {
         let name = &self.name;
 

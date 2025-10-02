@@ -39,6 +39,7 @@ pub struct MacroArgs {
     pub partial: PartialAttr,
     #[cfg(feature = "env")]
     pub env_prefix: Option<String>,
+    pub is_empty: Option<ExprPath>,
     pub default: bool,
 
     // serde

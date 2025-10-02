@@ -15,7 +15,9 @@ impl Field<'_> {
     pub fn generate_is_empty(&self) -> TokenStream {
         let key = self.get_field_key();
 
-        if (self.is_nested() || self.is_container()) && !self.is_nullable() {
+        if let Some(func) = &self.args.is_empty {
+            quote! { #func(&self.#key) }
+        } else if (self.is_nested() || self.is_container()) && !self.is_nullable() {
             quote! { self.#key.is_empty() }
         } else {
             quote! { self.#key.is_none() }
@@ -214,6 +216,19 @@ impl Field<'_> {
 
         let first = if stmts.is_empty() {
             quote! {}
+        } else if self.is_nullable() {
+            quote! {
+                if let Some(setting) = self.#key.as_ref() {
+                    #(#stmts)*
+                }
+            }
+        } else if self.is_nested() {
+            quote! {
+                {
+                    let setting = &self.#key;
+                    #(#stmts)*
+                }
+            }
         } else {
             quote! {
                 if let Some(setting) = self.#key.as_ref() {

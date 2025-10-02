@@ -27,13 +27,16 @@ impl ToTokens for ConfigMacro<'_> {
         // Generate implementations
         let default_values = cfg.type_of.generate_default_values();
         let empty_values = cfg.type_of.generate_empty_values();
-        let is_empty_impl = cfg.type_of.generate_is_empty_impl();
         let finalize = cfg.type_of.generate_finalize();
         let merge = cfg.type_of.generate_merge();
         let from_partial = cfg.type_of.generate_from_partial(&partial_name);
         let settings_metadata = cfg.type_of.generate_settings_metadata();
         let instrument = instrument_quote();
 
+        let is_empty_impl = match &cfg.args.is_empty {
+            Some(func) => quote! { #func(self) },
+            None => cfg.type_of.generate_is_empty_impl(),
+        };
 
         let context = match cfg.args.context.as_ref() {
             Some(ctx) => quote! { #ctx },

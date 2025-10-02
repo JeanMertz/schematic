@@ -1,9 +1,9 @@
 use crate::common::FieldSerdeArgs;
-use crate::utils::{extract_common_attrs, format_case};
+use crate::utils::{extract_common_attrs, format_case, preserve_str_literal};
 use darling::FromAttributes;
 use proc_macro2::{Ident, TokenStream};
 use quote::{ToTokens, quote};
-use syn::{Attribute, ExprPath, Fields, Variant as NativeVariant};
+use syn::{Attribute, Expr, ExprPath, Fields, Variant as NativeVariant};
 
 #[derive(Clone)]
 pub enum TaggedFormat {
@@ -30,8 +30,10 @@ pub struct VariantArgs {
     pub nested: bool,
     pub required: bool,
     #[cfg(feature = "validate")]
-    pub validate: Option<syn::Expr>,
+    pub validate: Option<Expr>,
     pub empty: bool,
+    #[darling(with = preserve_str_literal, map = "Some")]
+    pub is_empty: Option<Expr>,
 
     // serde
     pub rename: Option<String>,

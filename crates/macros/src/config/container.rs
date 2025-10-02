@@ -30,11 +30,24 @@ impl Container<'_> {
             }
             Self::Enum { variants } => {
                 let empty = variants.iter().filter(|v| v.is_empty()).collect::<Vec<_>>();
-
                 let default = variants.iter().find(|v| v.is_default());
-
+                let nested = variants
+                    .iter()
+                    .filter(|v| v.is_nested())
+                    .collect::<Vec<_>>();
                 let variant = if empty.is_empty() {
-                    default.expect("No variant has been marked as `empty` or `default`.")
+                    // If there is no `empty` variant, check for `default`.
+                    if let Some(default) = default {
+                        default
+                    // If there is no `default` variant, check for exactly one
+                    // `nested`.
+                    } else if nested.len() == 1 {
+                        nested[0]
+                    // Otherwise, either `empty`, `default` or `nested` must be
+                    // attributed to a variant.
+                    } else {
+                        panic!("No variant has been marked as `empty`, `default` or `nested`.")
+                    }
                 } else if empty.len() > 1 {
                     panic!("Only 1 variant may be marked as `empty`.");
                 } else if default.is_some() && !empty.is_empty() {
@@ -80,6 +93,11 @@ impl Container<'_> {
                     }
                 });
             }
+        }
+
+        // Triggers for unit structs such as `struct MyStruct {}`.
+        if checks.is_empty() {
+            checks.push(quote! { true });
         }
 
         quote! {

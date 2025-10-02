@@ -1,7 +1,7 @@
 use crate::common::Variant;
 use proc_macro2::{Ident, TokenStream};
 use quote::{format_ident, quote};
-use syn::{Fields, FieldsUnnamed};
+use syn::{Expr, Fields, FieldsUnnamed, Lit};
 
 impl Variant<'_> {
     pub fn generate_default_value(&self) -> TokenStream {
@@ -26,20 +26,58 @@ impl Variant<'_> {
 
     pub fn generate_is_empty(&self) -> TokenStream {
         let name = &self.name;
-        let is_empty = self.is_empty() || self.is_default();
 
         match &self.value.fields {
             Fields::Named(_) => unreachable!(),
-            Fields::Unnamed(_) => {
-                if !is_empty {
-                    quote! { Self::#name(..) => false, }
-                } else if self.is_nested() {
-                    quote! { Self::#name(v) => v.is_empty(), }
-                } else {
-                    quote! { Self::#name(..) => true, }
-                }
+            Fields::Unnamed(fields) => {
+                self.map_unnamed_match(self.name, fields, |idents, _| {
+                    let stmts = idents
+                        .iter()
+                        .enumerate()
+                        .map(|(i, ident)| {
+                            let ty = &fields.unnamed[i].ty;
+                            if let Some(expr) = &self.args.is_empty.as_ref() {
+                                match expr {
+                                    Expr::Array(_) | Expr::Call(_) | Expr::Macro(_) | Expr::Tuple(_) => quote! { #expr },
+                                    Expr::Path(func) => quote! { #func(#ident) },
+                                    Expr::Lit(lit) => match &lit.lit {
+                                        Lit::Str(string) => quote! { #ty::try_from(#string) },
+                                        other => quote! { #other },
+                                    },
+                                    v => {
+                                        let v = format!("{v:?}");
+                                        panic!("Unsupported `is_empty` value ({v}). May only provide paths, literals, primitives, arrays, or tuples.")
+                                    },
+                                }
+                            } else if self.is_nested() {
+                                quote! { #ident.is_empty() }
+                            } else {
+                                quote! { #ident == &<#ty as Default>::default() }
+                            }
+                        })
+                        .collect::<Vec<_>>();
+
+                    quote! {
+                        #(#stmts) && *
+                    }
+                })
             }
-            Fields::Unit => quote! { Self::#name => #is_empty, },
+            Fields::Unit => {
+                let value = if let Some(expr) = &self.args.is_empty.as_ref() {
+                    match expr {
+                        Expr::Array(_) | Expr::Call(_) | Expr::Macro(_) | Expr::Tuple(_) | Expr::Lit(_) => quote! { #expr },
+                        Expr::Path(func) => quote! { #func() },
+                        v => {
+                            let v = format!("{v:?}");
+                            panic!("Unsupported `is_empty` value ({v}). May only provide paths, literals, primitives, arrays, or tuples.")
+                        },
+                    }
+                } else {
+                    quote! { false }
+                };
+
+                quote! { Self::#name => #value, }
+            }
         }
     }
 
@@ -308,15 +346,10 @@ impl Variant<'_> {
         let mut count: u8 = 97; // a
         let mut outer_names = vec![];
         let mut inner_names = vec![];
-        let mut merge_stmts = vec![];
 
         for _ in &fields.unnamed {
             let outer_name = format_ident!("{}o", count as char);
             let inner_name = format_ident!("{}i", count as char);
-
-            merge_stmts.push(quote! {
-                #outer_name.merge(context, #inner_name)?;
-            });
 
             outer_names.push(outer_name);
             inner_names.push(inner_name);

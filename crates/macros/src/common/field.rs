@@ -55,6 +55,7 @@ pub struct FieldArgs {
     #[cfg(feature = "validate")]
     pub validate: Option<Expr>,
     pub partial: PartialAttr,
+    pub is_empty: Option<ExprPath>,
 
     // serde
     pub alias: Option<String>,

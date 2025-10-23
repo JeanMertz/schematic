@@ -96,18 +96,16 @@ impl Field<'_> {
                             partial.#key = #func(#value, context)?;
                         }
                     }
+                } else if nullable {
+                    quote! {
+                        if let Some(data) = partial.#key {
+                            partial.#key = Some(#value);
+                        }
+                    }
                 } else {
-                    if nullable {
-                        quote! {
-                            if let Some(data) = partial.#key {
-                                partial.#key = Some(#value);
-                            }
-                        }
-                    } else {
-                        quote! {
-                            let data = partial.#key;
-                            partial.#key = #value;
-                        }
+                    quote! {
+                        let data = partial.#key;
+                        partial.#key = #value;
                     }
                 }
             }

@@ -60,9 +60,17 @@ impl FieldValue<'_> {
                     quote! { handle_default_result(#func(context))? }
                 }
                 Expr::Lit(lit) => match &lit.lit {
-                    Lit::Str(string) => quote! {
-                        Some(handle_default_result(#value::try_from(#string))?)
-                    },
+                    Lit::Str(string) => {
+                        if nested && !nullable {
+                            quote! {
+                                handle_default_result(#value::try_from(#string))?
+                            }
+                        } else {
+                            quote! {
+                                Some(handle_default_result(#value::try_from(#string))?)
+                            }
+                        }
+                    }
                     other => quote! { Some(#other) },
                 },
                 invalid => {
@@ -149,29 +157,48 @@ impl FieldValue<'_> {
 
     pub fn get_merge_statement(&self, key: TokenStream, args: &FieldArgs) -> TokenStream {
         match self {
-            Self::NestedValue { info, .. } => {
-                if args.merge.is_some() {
-                    panic!("Nested configs do not support `merge` unless wrapped in a collection.");
-                }
-
-                if info.optional {
-                    quote! {
-                        self.#key = merge_nested_optional_setting(
-                            self.#key.take(),
-                            next.#key.take(),
-                            context,
-                        )?;
+            Self::NestedValue { info, .. } => match args.merge.as_ref() {
+                Some(func) => {
+                    if info.optional {
+                        quote! {
+                            self.#key = merge_setting(
+                                self.#key.take(),
+                                next.#key.take(),
+                                context,
+                                #func,
+                            )?;
+                        }
+                    } else {
+                        quote! {
+                            self.#key = merge_nested_map_setting(
+                                std::mem::take(&mut self.#key),
+                                std::mem::take(&mut next.#key),
+                                context,
+                                #func,
+                            )?;
+                        }
                     }
-                } else {
-                    quote! {
-                        self.#key = merge_nested_setting(
-                            std::mem::take(&mut self.#key),
-                            std::mem::take(&mut next.#key),
-                            context,
-                        )?;
+                }
+                _ => {
+                    if info.optional {
+                        quote! {
+                            self.#key = merge_nested_optional_setting(
+                                self.#key.take(),
+                                next.#key.take(),
+                                context,
+                            )?;
+                        }
+                    } else {
+                        quote! {
+                            self.#key = merge_nested_setting(
+                                std::mem::take(&mut self.#key),
+                                std::mem::take(&mut next.#key),
+                                context,
+                            )?;
+                        }
                     }
                 }
-            }
+            },
             Self::NestedList {
                 collection_info, ..
             }

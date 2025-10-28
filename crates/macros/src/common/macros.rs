@@ -47,6 +47,7 @@ pub struct MacroArgs {
     pub rename_all: Option<String>,
     pub rename_all_fields: Option<String>,
     pub serde: SerdeMeta,
+    pub no_deserialize_derive: bool,
 }
 
 #[derive(Default, Debug)]

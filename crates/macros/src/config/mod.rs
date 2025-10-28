@@ -72,6 +72,7 @@ impl ToTokens for ConfigMacro<'_> {
             &partial_name,
             &partial_attrs,
             cfg.generics,
+            !cfg.args.no_deserialize_derive,
         );
         let partial_default_impl = cfg
             .type_of

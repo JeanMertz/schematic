@@ -471,6 +471,7 @@ impl Container<'_> {
         partial_name: &Ident,
         partial_attrs: &[TokenStream],
         partial_generics: &Generics,
+        deserialize_derive: bool,
     ) -> TokenStream {
         let serde = quote! { ::schematic::serde };
 
@@ -504,10 +505,17 @@ impl Container<'_> {
             }
         }
 
+        let de_derive = if deserialize_derive {
+            Some(quote! { #[derive(#serde::Deserialize)] })
+        } else {
+            None
+        };
+
         match self {
             Self::NamedStruct { fields, .. } => {
                 quote! {
-                    #[derive(Clone, Debug, PartialEq, #serde::Deserialize, #serde::Serialize)]
+                    #[derive(Clone, Debug, PartialEq, #serde::Serialize)]
+                    #de_derive
                     #[serde(crate = "::schematic::serde")]
                     #serde_bound
                     #(#partial_attrs)*
@@ -518,7 +526,8 @@ impl Container<'_> {
             }
             Self::UnnamedStruct { fields, .. } => {
                 quote! {
-                    #[derive(Clone, Debug, Default, PartialEq, #serde::Deserialize, #serde::Serialize)]
+                    #[derive(Clone, Debug, Default, PartialEq, #serde::Serialize)]
+                    #de_derive
                     #[serde(crate = "::schematic::serde")]
                     #serde_bound
                     #(#partial_attrs)*
@@ -529,7 +538,8 @@ impl Container<'_> {
             }
             Self::Enum { variants } => {
                 quote! {
-                    #[derive(Clone, Debug, PartialEq, #serde::Deserialize, #serde::Serialize)]
+                    #[derive(Clone, Debug, PartialEq, #serde::Serialize)]
+                    #de_derive
                     #[serde(crate = "::schematic::serde")]
                     #serde_bound
                     #(#partial_attrs)*

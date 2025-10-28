@@ -4,7 +4,7 @@ use darling::ast::NestedMeta;
 use darling::{FromDeriveInput, FromMeta};
 use proc_macro2::{Ident, TokenStream};
 use quote::{ToTokens, quote};
-use syn::{Attribute, Data, DeriveInput, ExprPath, Fields};
+use syn::{Attribute, Data, DeriveInput, ExprPath, Fields, Generics};
 
 // #[serde()]
 #[derive(FromDeriveInput, Default)]
@@ -77,6 +77,7 @@ pub struct Macro<'l> {
     pub attrs: Vec<&'l Attribute>,
     pub casing_format: String,
     pub name: &'l Ident,
+    pub generics: &'l Generics,
     pub type_of: Container<'l>,
 }
 
@@ -193,6 +194,7 @@ impl<'l> Macro<'l> {
             serde_args,
             attrs: extract_common_attrs(&input.attrs),
             name: &input.ident,
+            generics: &input.generics,
             type_of: config_type,
             casing_format,
         }

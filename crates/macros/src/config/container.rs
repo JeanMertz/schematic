@@ -1,6 +1,7 @@
 use crate::common::Container;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
+use syn::{Generics, parse_quote};
 
 impl Container<'_> {
     pub fn generate_empty_values(&self) -> TokenStream {
@@ -469,32 +470,122 @@ impl Container<'_> {
         &self,
         partial_name: &Ident,
         partial_attrs: &[TokenStream],
+        partial_generics: &Generics,
     ) -> TokenStream {
         let serde = quote! { ::schematic::serde };
 
+        // For any container that has generics, we need to make sure our
+        // `Deserialize` attribute is bound to the correct type.
+        let serde_bound = if partial_generics.type_params().count() > 0 {
+            let bounds_str = partial_generics
+                .type_params()
+                .map(|tp| format!("{}: ::schematic::serde::de::DeserializeOwned", tp.ident))
+                .collect::<Vec<_>>()
+                .join(", ");
+
+            Some(quote!(#[serde(bound(deserialize = #bounds_str))]))
+        } else {
+            None
+        };
+
+        let (_, ty_generics, _) = partial_generics.split_for_impl();
+        let mut generics = partial_generics.clone();
+        let where_clause = generics.make_where_clause();
+        for tp in partial_generics.type_params() {
+            let ident = &tp.ident;
+
+            where_clause.predicates
+                .push(parse_quote!(#ident: Clone + PartialEq + #serde::Serialize + #serde::de::DeserializeOwned));
+
+            if self.has_nested() {
+                where_clause
+                    .predicates
+                    .push(parse_quote!(#ident: schematic::Schematic));
+            }
+        }
+
         match self {
-            Self::NamedStruct {
-                fields: settings, ..
-            } => {
+            Self::NamedStruct { fields, .. } => {
                 quote! {
-                    #[derive(Clone, Debug, Default, PartialEq, #serde::Deserialize, #serde::Serialize)]
+                    #[derive(Clone, Debug, PartialEq, #serde::Deserialize, #serde::Serialize)]
                     #[serde(crate = "::schematic::serde")]
+                    #serde_bound
                     #(#partial_attrs)*
-                    pub struct #partial_name {
-                        #(#settings)*
+                    pub struct #partial_name #ty_generics #where_clause {
+                        #(#fields)*
                     }
                 }
             }
-            Self::UnnamedStruct {
-                fields: settings, ..
-            } => {
+            Self::UnnamedStruct { fields, .. } => {
                 quote! {
                     #[derive(Clone, Debug, Default, PartialEq, #serde::Deserialize, #serde::Serialize)]
                     #[serde(crate = "::schematic::serde")]
+                    #serde_bound
                     #(#partial_attrs)*
-                    pub struct #partial_name(
-                        #(#settings)*
-                    );
+                    pub struct #partial_name #ty_generics(
+                        #(#fields)*
+                    ) #where_clause;
+                }
+            }
+            Self::Enum { variants } => {
+                quote! {
+                    #[derive(Clone, Debug, PartialEq, #serde::Deserialize, #serde::Serialize)]
+                    #[serde(crate = "::schematic::serde")]
+                    #serde_bound
+                    #(#partial_attrs)*
+                    pub enum #partial_name #ty_generics #where_clause {
+                        #(#variants)*
+                    }
+                }
+            }
+        }
+    }
+
+    pub fn generate_partial_default_impl(
+        &self,
+        partial_name: &Ident,
+        partial_generics: &Generics,
+    ) -> TokenStream {
+        let serde = quote! { ::schematic::serde };
+
+        let (impl_generics, ty_generics, _) = partial_generics.split_for_impl();
+        let mut generics = partial_generics.clone();
+        let where_clause = generics.make_where_clause();
+        for tp in partial_generics.type_params() {
+            let ident = &tp.ident;
+
+            where_clause.predicates
+                .push(parse_quote!(#ident: Clone + PartialEq + #serde::Serialize + #serde::de::DeserializeOwned));
+
+            if self.has_nested() {
+                where_clause
+                    .predicates
+                    .push(parse_quote!(#ident: schematic::Schematic));
+            }
+        }
+
+        match self {
+            Self::NamedStruct { fields, .. } | Self::UnnamedStruct { fields, .. } => {
+                let defaults = fields.iter().map(|s| {
+                    if let Some(name) = &s.name {
+                        quote! {
+                            #name: Default::default()
+                        }
+                    } else {
+                        quote! {
+                            Default::default()
+                        }
+                    }
+                });
+
+                quote! {
+                    impl #impl_generics Default for #partial_name #ty_generics #where_clause {
+                        fn default() -> Self {
+                            Self {
+                                #(#defaults),*
+                            }
+                        }
+                    }
                 }
             }
             Self::Enum { variants } => {
@@ -505,21 +596,13 @@ impl Container<'_> {
 
                 let default_impl = if let Some(default) = default_variant {
                     let value = default.generate_default_value();
-
                     quote! { Self::#value }
                 } else {
                     quote! { panic!("No variant has been marked as default!"); }
                 };
 
                 quote! {
-                    #[derive(Clone, Debug, PartialEq, #serde::Deserialize, #serde::Serialize)]
-                    #[serde(crate = "::schematic::serde")]
-                    #(#partial_attrs)*
-                    pub enum #partial_name {
-                        #(#variants)*
-                    }
-
-                    impl Default for #partial_name {
+                    impl #impl_generics Default for #partial_name #ty_generics #where_clause {
                         fn default() -> Self {
                             #default_impl
                         }
@@ -530,13 +613,11 @@ impl Container<'_> {
     }
 
     #[cfg(feature = "schema")]
-    pub fn generate_partial_schema(
-        &self,
-        config_name: &Ident,
-        _partial_name: &Ident,
-    ) -> TokenStream {
+    pub fn generate_partial_schema(&self, config_name: &Ident, generics: &Generics) -> TokenStream {
+        let (_, ty_generics, _) = generics.split_for_impl();
+
         quote! {
-            let mut schema = #config_name::build_schema(schema);
+            let mut schema = <#config_name #ty_generics as schematic::Schematic>::build_schema(schema);
             schematic::internal::partialize_schema(&mut schema, true);
         }
     }

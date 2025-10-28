@@ -1,4 +1,4 @@
-use crate::common::Variant;
+use crate::{common::Variant, utils::expr_path_with_turbofish};
 use proc_macro2::{Ident, TokenStream};
 use quote::{format_ident, quote};
 use syn::{Expr, Fields, FieldsUnnamed, Lit};
@@ -41,7 +41,10 @@ impl Variant<'_> {
                                     Expr::Array(_) | Expr::Call(_) | Expr::Macro(_) | Expr::Tuple(_) => quote! { #expr },
                                     Expr::Path(func) => quote! { #func(#ident) },
                                     Expr::Lit(lit) => match &lit.lit {
-                                        Lit::Str(string) => quote! { #ty::try_from(#string) },
+                                        Lit::Str(string) => {
+                                            let ty = expr_path_with_turbofish(ty);
+                                            quote! { #ty::try_from(#string) }
+                                        },
                                         other => quote! { #other },
                                     },
                                     v => {
@@ -303,6 +306,7 @@ impl Variant<'_> {
                         .map(|(index, o)| {
                             if self.is_nested() {
                                 let ty = &fields.unnamed[index].ty;
+                                let ty = expr_path_with_turbofish(ty);
 
                                 quote! { #ty::from_partial(#o)? }
                             } else {

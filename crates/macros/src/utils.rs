@@ -1,6 +1,9 @@
 use convert_case::{Boundary, Case, Casing};
 use quote::{ToTokens, format_ident, quote};
-use syn::{Attribute, Expr, ExprLit, Lit, Meta, Path};
+use syn::{
+    AngleBracketedGenericArguments, Attribute, Expr, ExprLit, Lit, Meta, Path, PathArguments, Type,
+    TypePath,
+};
 
 pub fn format_case(format: &str, value: &str, is_variant: bool) -> String {
     let case = match format {
@@ -204,4 +207,24 @@ pub fn instrument_quote() -> proc_macro2::TokenStream {
 
     #[cfg(not(feature = "tracing"))]
     quote! {}
+}
+
+pub fn expr_path_with_turbofish(ty: &Type) -> proc_macro2::TokenStream {
+    let Type::Path(TypePath { qself: None, path }) = ty else {
+        return quote! { #ty }; // fallback
+    };
+
+    let mut base = path.clone();
+    let last = base.segments.last_mut().unwrap();
+
+    let args: Option<AngleBracketedGenericArguments> =
+        match std::mem::replace(&mut last.arguments, PathArguments::None) {
+            PathArguments::AngleBracketed(a) => Some(a),
+            _ => None,
+        };
+
+    match args {
+        Some(a) => quote! { #base :: #a }, // e.g., VecWithMerge :: <T>
+        None => quote! { #base },
+    }
 }

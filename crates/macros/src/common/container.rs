@@ -1,4 +1,7 @@
-use crate::common::{Field, Variant};
+use crate::{
+    common::{Field, Variant},
+    utils::expr_path_with_turbofish,
+};
 use proc_macro2::TokenStream;
 use quote::{ToTokens, quote};
 
@@ -45,6 +48,8 @@ impl Container<'_> {
                     };
                     let nested = if field.is_nested() {
                         let value = field.value_type.get_config_type();
+                        let value = expr_path_with_turbofish(value);
+
                         quote!(Some(#value::settings()))
                     } else {
                         quote!(None)

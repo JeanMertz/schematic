@@ -7,6 +7,7 @@ use crate::common::Macro;
 use crate::utils::instrument_quote;
 use proc_macro2::TokenStream;
 use quote::{ToTokens, format_ident, quote};
+use syn::parse_quote;
 
 pub struct ConfigMacro<'l>(pub Macro<'l>);
 
@@ -15,13 +16,70 @@ impl ToTokens for ConfigMacro<'_> {
         let cfg = &self.0;
         let name = cfg.name;
 
+        let serde = quote! { ::schematic::serde };
+
+        let mut generics = cfg.generics.clone();
+        let (impl_generics, ty_generics, where_clause) = {
+            let wc = generics.make_where_clause();
+            for tp in cfg.generics.type_params() {
+                let ident = &tp.ident;
+                wc.predicates
+                .push(parse_quote!(#ident: Clone + std::fmt::Debug + PartialEq + #serde::Serialize + #serde::de::DeserializeOwned));
+            }
+
+            generics.split_for_impl()
+        };
+
+        let mut schematic_generics = cfg.generics.clone();
+        let schematic_where = {
+            let wc2 = schematic_generics.make_where_clause();
+            for tp in cfg.generics.type_params() {
+                let ident = &tp.ident;
+                wc2.predicates
+                    .push(parse_quote!(#ident: schematic::Schematic));
+            }
+
+            schematic_generics.where_clause.as_ref()
+        };
+
+        let mut partial_schematic_generics = cfg.generics.clone();
+        let partial_schematic_where = {
+            let wc2 = partial_schematic_generics.make_where_clause();
+            for tp in cfg.generics.type_params() {
+                let ident = &tp.ident;
+                wc2.predicates
+                    .push(parse_quote!(#ident: Clone + PartialEq + #serde::Serialize + #serde::de::DeserializeOwned + schematic::Schematic));
+            }
+            partial_schematic_generics.where_clause.as_ref()
+        };
+
+        let mut partial_config_generics = cfg.generics.clone();
+        let partial_config_where = {
+            let wc = partial_config_generics.make_where_clause();
+            for tp in cfg.generics.type_params() {
+                let ident = &tp.ident;
+                wc.predicates
+                    .push(parse_quote!(#ident: Clone + PartialEq + #serde::Serialize + #serde::de::DeserializeOwned + schematic::Schematic));
+            }
+
+            partial_config_generics.where_clause.as_ref()
+        };
+
         // Generate the partial implementation
         let partial_name = format_ident!("Partial{}", cfg.name);
         let partial_attrs = cfg.get_partial_attrs();
-        let partial = cfg.type_of.generate_partial(&partial_name, &partial_attrs);
+        let partial = cfg.type_of.generate_partial(
+            &partial_name,
+            &partial_attrs,
+            cfg.generics,
+        );
+        let partial_default_impl = cfg
+            .type_of
+            .generate_partial_default_impl(&partial_name, cfg.generics);
 
         tokens.extend(quote! {
             #partial
+            #partial_default_impl
         });
 
         // Generate implementations
@@ -98,7 +156,7 @@ impl ToTokens for ConfigMacro<'_> {
 
         tokens.extend(quote! {
             #[automatically_derived]
-            impl schematic::PartialConfig for #partial_name {
+            impl #impl_generics schematic::PartialConfig for #partial_name #ty_generics #partial_config_where {
                 type Context = #context;
 
                 #instrument
@@ -139,8 +197,8 @@ impl ToTokens for ConfigMacro<'_> {
             }
 
             #[automatically_derived]
-            impl schematic::Config for #name {
-                type Partial = #partial_name;
+            impl #impl_generics schematic::Config for #name #ty_generics #partial_config_where {
+                type Partial = #partial_name #ty_generics;
 
                 #instrument
                 fn from_partial(partial: Self::Partial) -> std::result::Result<Self, schematic::ConfigError> {
@@ -157,7 +215,7 @@ impl ToTokens for ConfigMacro<'_> {
         if cfg.args.default {
             tokens.extend(quote! {
                 #[automatically_derived]
-                impl Default for #name {
+                impl #impl_generics Default for #name #ty_generics #where_clause {
                     #instrument
                     fn default() -> Self {
                         let context = <<Self as schematic::Config>::Partial as schematic::PartialConfig>::Context::default();
@@ -177,11 +235,11 @@ impl ToTokens for ConfigMacro<'_> {
             let schema_impl = cfg.type_of.generate_schema(&cfg.attrs);
 
             let partial_schema_name = partial_name.to_string();
-            let partial_schema_impl = cfg.type_of.generate_partial_schema(name, &partial_name);
+            let partial_schema_impl = cfg.type_of.generate_partial_schema(name, cfg.generics);
 
             tokens.extend(quote! {
                 #[automatically_derived]
-                impl schematic::Schematic for #name {
+                impl #impl_generics schematic::Schematic for #name #ty_generics #schematic_where {
                     fn schema_name() -> Option<String> {
                         Some(#schema_name.into())
                     }
@@ -195,7 +253,7 @@ impl ToTokens for ConfigMacro<'_> {
                 }
 
                 #[automatically_derived]
-                impl schematic::Schematic for #partial_name {
+                impl #impl_generics schematic::Schematic for #partial_name #ty_generics #partial_schematic_where {
                     fn schema_name() -> Option<String> {
                         Some(#partial_schema_name.into())
                     }
@@ -213,10 +271,10 @@ impl ToTokens for ConfigMacro<'_> {
         {
             tokens.extend(quote! {
                 #[automatically_derived]
-                impl schematic::Schematic for #name {}
+                impl #impl_generics schematic::Schematic for #name #ty_generics #where_clause {}
 
                 #[automatically_derived]
-                impl schematic::Schematic for #partial_name {}
+                impl #impl_generics schematic::Schematic for #partial_name #ty_generics #where_clause {}
             });
         }
     }

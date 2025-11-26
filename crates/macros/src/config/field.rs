@@ -125,13 +125,11 @@ impl Field<'_> {
             }
 
             if self.value_type.is_outer_boxed() {
-                let mut value = quote! { Box::new(partial.#key.unwrap_or_default()) };
-
                 if self.is_nullable() {
-                    value = quote! { Some(#value) };
+                    quote! { partial.#key.map(Box::new) }
+                } else {
+                    quote! { Box::new(partial.#key) }
                 }
-
-                value
             } else {
                 if self.is_nullable() {
                     // Use optional values as-is as they're already wrapped in `Option`

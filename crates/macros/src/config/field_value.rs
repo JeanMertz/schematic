@@ -126,13 +126,13 @@ impl FieldValue<'_> {
         }
     }
 
-    pub fn get_from_partial_value(&self) -> TokenStream {
+    pub fn get_from_partial_value(&self, field: String) -> TokenStream {
         match self {
             Self::NestedList {
                 item, item_info, ..
             } => self.map_data_with_info(
                 quote! {
-                    #item::from_partial(value)?
+                    #item::from_partial(value, { let mut fields = fields.clone(); fields.push(#field.to_owned()); fields })?
                 },
                 item_info,
             ),
@@ -140,7 +140,7 @@ impl FieldValue<'_> {
                 value, value_info, ..
             } => self.map_data_with_info(
                 quote! {
-                    #value::from_partial(value)?
+                    #value::from_partial(value, { let mut fields = fields.clone(); fields.push(#field.to_owned()); fields })?
                 },
                 value_info,
             ),
@@ -148,7 +148,7 @@ impl FieldValue<'_> {
                 let config = info.config.as_ref();
 
                 quote! {
-                    #config::from_partial(data)?
+                    #config::from_partial(data, { let mut fields = fields.clone(); fields.push(#field.to_owned()); fields })?
                 }
             }
             Self::Value { .. } => quote! { data },

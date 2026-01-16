@@ -136,14 +136,14 @@ impl Field<'_> {
                     quote! { partial.#key }
                 } else if self.is_required() {
                     // Trigger a validation error if the value is missing
-                    quote! { partial.#key.ok_or(schematic::ConfigError::MissingRequired(#key_quoted.into()))? }
+                    quote! { partial.#key.ok_or(schematic::ConfigError::MissingRequired{ fields: { let mut fields = fields.clone(); fields.push(#key_quoted.to_owned()); fields } })? }
                 } else {
                     // Otherwise unwrap the resolved value or use the type default
                     quote! { partial.#key.unwrap_or_default() }
                 }
             }
         } else {
-            let mut value = self.value_type.get_from_partial_value();
+            let mut value = self.value_type.get_from_partial_value(key_quoted);
 
             if self.value_type.is_outer_boxed() {
                 value = quote! { Box::new(#value) };

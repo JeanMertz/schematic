@@ -97,7 +97,7 @@ pub trait Config: Sized + Schematic {
     ///
     /// If the partial configuration is missing required values, an error is
     /// returned.
-    fn from_partial(partial: Self::Partial) -> Result<Self, ConfigError>;
+    fn from_partial(partial: Self::Partial, fields: Vec<String>) -> Result<Self, ConfigError>;
 
     /// Return a map of all settings and their metadata for the configuration.
     fn settings() -> ConfigSettingMap {

@@ -308,7 +308,7 @@ impl Variant<'_> {
                                 let ty = &fields.unnamed[index].ty;
                                 let ty = expr_path_with_turbofish(ty);
 
-                                quote! { #ty::from_partial(#o)? }
+                                quote! { #ty::from_partial(#o, fields.clone())? }
                             } else {
                                 quote! { #o }
                             }

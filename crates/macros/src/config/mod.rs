@@ -202,7 +202,7 @@ impl ToTokens for ConfigMacro<'_> {
                 type Partial = #partial_name #ty_generics;
 
                 #instrument
-                fn from_partial(partial: Self::Partial) -> std::result::Result<Self, schematic::ConfigError> {
+                fn from_partial(partial: Self::Partial, fields: Vec<String>) -> std::result::Result<Self, schematic::ConfigError> {
                     #from_partial
                 }
 
@@ -223,7 +223,7 @@ impl ToTokens for ConfigMacro<'_> {
 
                         let defaults = <<Self as schematic::Config>::Partial as schematic::PartialConfig>::default_values(&context).unwrap().unwrap_or_default();
 
-                        <Self as schematic::Config>::from_partial(defaults)
+                        <Self as schematic::Config>::from_partial(defaults, vec![])
                             .expect("any partial with missing required values will not derive Default")
                     }
                 }

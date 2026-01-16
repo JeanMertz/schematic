@@ -50,8 +50,8 @@ pub enum ConfigError {
     InvalidDefaultValue(String),
 
     #[diagnostic(code(config::required))]
-    #[error("Missing required value. {0}")]
-    MissingRequired(String),
+    #[error("Missing required value for field {}.", .fields.join(".").style(Style::Property))]
+    MissingRequired { fields: Vec<String> },
 
     #[diagnostic(code(config::file::invalid))]
     #[error("Invalid file path used as a source.")]

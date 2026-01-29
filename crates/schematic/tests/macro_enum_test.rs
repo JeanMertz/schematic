@@ -22,6 +22,7 @@ enum AllUnit {
 enum AllUnnamed {
     Foo(String),
     Bar(bool),
+    #[setting(empty)]
     Baz(usize),
 }
 
@@ -55,7 +56,7 @@ enum Collections {
     List(Vec<String>),
     #[setting(merge = merge::merge_btreemap, validate = validate::min_length(1))]
     Map(BTreeMap<String, String>),
-    #[setting(merge = merge_tuple, validate = validate_tuple)]
+    #[setting(merge = merge_tuple, validate = validate_tuple, empty)]
     Tuple(String, usize),
 }
 
@@ -76,7 +77,7 @@ fn validate_string<T, C>(_: (&Option<String>), _: &T, _: &C, _: bool) -> Result<
 #[derive(Config)]
 enum ValidateConfigs {
     Normal(String),
-    #[setting(validate = validate_string)]
+    #[setting(validate = validate_string, empty)]
     Optional(Option<String>),
     #[setting(validate = validate_string, required)]
     Required(Option<String>),
@@ -91,7 +92,7 @@ enum WithSerde {
     Foo(String),
     #[serde(alias = "barrrrr")]
     Bar(bool),
-    #[setting(rename = "bazzzzz")]
+    #[setting(rename = "bazzzzz", empty)]
     Baz(usize),
 }
 
@@ -103,6 +104,7 @@ enum WithComments {
     /// Variant
     Bar,
     /** Variant */
+    #[setting(empty)]
     Baz,
 }
 
@@ -113,7 +115,7 @@ enum Untagged {
     Bar(bool),
     #[setting(rename = "bazzer")]
     Baz(usize, String),
-    #[setting(nested)]
+    #[setting(nested, empty)]
     Qux(SomeConfig),
 }
 
@@ -123,7 +125,7 @@ enum ExternalTagged {
     Bar(bool),
     #[setting(rename = "bazzer")]
     Baz(usize),
-    #[setting(nested)]
+    #[setting(nested, empty)]
     Qux(SomeConfig),
 }
 
@@ -134,7 +136,7 @@ enum InternalTagged {
     Bar(bool),
     #[setting(rename = "bazzer")]
     Baz(usize),
-    #[setting(nested)]
+    #[setting(nested, empty)]
     Qux(SomeConfig),
 }
 
@@ -145,7 +147,7 @@ enum AdjacentTagged {
     Bar(bool),
     #[setting(rename = "bazzer")]
     Baz(usize),
-    #[setting(nested)]
+    #[setting(nested, empty)]
     Qux(SomeConfig),
 }
 

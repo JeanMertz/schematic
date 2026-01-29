@@ -99,7 +99,7 @@ derive_enum!(
 enum TupleEnum {
     #[setting(nested)]
     A(Empty),
-    #[setting(nested)]
+    #[setting(nested, empty)]
     B(Empty),
 }
 
@@ -111,7 +111,7 @@ struct Enums {
     fallback_opt: Option<UnitFallbackEnum>,
     #[setting(nested)]
     tuple: TupleEnum,
-    #[setting(nested)]
+    #[setting(nested, empty)]
     tuple_opt: Option<TupleEnum>,
 }
 
@@ -124,7 +124,7 @@ fn enums() {
 struct Nested {
     #[setting(nested)]
     field: Basic,
-    #[setting(nested)]
+    #[setting(nested, empty)]
     field_opt: Option<Basic>,
 }
 
@@ -137,7 +137,7 @@ fn nested() {
 struct NestedList {
     #[setting(nested)]
     field: Vec<Basic>,
-    #[setting(nested)]
+    #[setting(nested, empty)]
     field_opt: Option<Vec<Basic>>,
 }
 
@@ -150,7 +150,7 @@ fn nested_list() {
 struct NestedMap {
     #[setting(nested)]
     field: HashMap<String, Basic>,
-    #[setting(nested)]
+    #[setting(nested, empty)]
     field_opt: Option<HashMap<usize, Basic>>,
 }
 
@@ -165,7 +165,7 @@ enum Untagged {
     Foo,
     Bar(bool),
     Baz(usize, String),
-    #[setting(nested)]
+    #[setting(nested, empty)]
     Qux(Basic),
 }
 
@@ -179,7 +179,7 @@ enum ExternalTagged {
     Foo,
     Bar(bool),
     Baz(usize),
-    #[setting(nested)]
+    #[setting(nested, empty)]
     Qux(Basic),
 }
 
@@ -194,7 +194,7 @@ enum InternalTagged {
     Foo,
     Bar(bool),
     Baz(usize),
-    #[setting(nested)]
+    #[setting(nested, empty)]
     Qux(Basic),
 }
 
@@ -212,7 +212,7 @@ enum AdjacentTagged {
     Foo,
     Bar(bool),
     Baz(usize),
-    #[setting(nested)]
+    #[setting(nested, empty)]
     Qux(Basic),
 }
 

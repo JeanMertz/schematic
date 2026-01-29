@@ -21,7 +21,7 @@ pub struct NestedValidate {
 pub struct Validate {
     #[setting(validate = test_string)]
     string1: String,
-    #[setting(nested)]
+    #[setting(nested, empty)]
     nested: NestedValidate,
 }
 
@@ -184,7 +184,7 @@ pub struct ValidateRequired {
 #[derive(Config)]
 pub enum ValidateEnumRequired {
     Optional(Option<String>),
-    #[setting(required)]
+    #[setting(required, empty)]
     Required(Option<String>),
 }
 

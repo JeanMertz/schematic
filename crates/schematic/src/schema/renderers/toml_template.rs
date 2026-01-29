@@ -1,5 +1,4 @@
 use super::template::*;
-use crate::format::Format;
 use crate::schema::{RenderResult, SchemaRenderer};
 use indexmap::IndexMap;
 use schematic_types::*;
@@ -28,7 +27,7 @@ impl TomlTemplateRenderer {
 
     pub fn new(options: TemplateOptions) -> Self {
         TomlTemplateRenderer {
-            ctx: TemplateContext::new(Format::Toml, options),
+            ctx: TemplateContext::new(options),
             schemas: IndexMap::default(),
             arrays: BTreeMap::new(),
             tables: BTreeMap::new(),
@@ -173,10 +172,21 @@ impl SchemaRenderer<String> for TomlTemplateRenderer {
         let mut out = vec![];
 
         for (name, field) in &structure.fields {
+            if field.flatten {
+                continue;
+            }
+
             self.ctx.push_stack(name);
 
             if !self.ctx.is_hidden(field) {
-                let prop = format!("{} = {}", name, self.render_schema(&field.schema)?);
+                let prop = format!(
+                    "{} = {}",
+                    name,
+                    self.render_schema(self.ctx.validate_schema_variant(
+                        self.ctx.get_stack_value().as_ref(),
+                        &field.schema
+                    ))?
+                );
 
                 out.push(self.ctx.create_field(field, prop));
             }

@@ -800,29 +800,6 @@ expression: "std::fs::read_to_string(file).unwrap()"
             }
           ]
         },
-        "rest": {
-          "anyOf": [
-            {
-              "type": "object",
-              "additionalProperties": {
-                "type": [
-                  "boolean",
-                  "object",
-                  "array",
-                  "number",
-                  "string",
-                  "integer"
-                ]
-              },
-              "propertyNames": {
-                "type": "string"
-              }
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
         "s3_value": {
           "anyOf": [
             {
@@ -857,7 +834,16 @@ expression: "std::fs::read_to_string(file).unwrap()"
           ]
         }
       },
-      "additionalProperties": false
+      "additionalProperties": {
+        "type": [
+          "boolean",
+          "object",
+          "array",
+          "number",
+          "string",
+          "integer"
+        ]
+      }
     },
     "Serde": {
       "title": "Serde",
@@ -992,7 +978,6 @@ expression: "std::fs::read_to_string(file).unwrap()"
         "enums",
         "map",
         "number",
-        "rest",
         "s3_value",
         "string",
         "vector"
@@ -1021,22 +1006,6 @@ expression: "std::fs::read_to_string(file).unwrap()"
         "number": {
           "type": "number"
         },
-        "rest": {
-          "type": "object",
-          "additionalProperties": {
-            "type": [
-              "boolean",
-              "object",
-              "array",
-              "number",
-              "string",
-              "integer"
-            ]
-          },
-          "propertyNames": {
-            "type": "string"
-          }
-        },
         "s3_value": {
           "type": "string"
         },
@@ -1050,7 +1019,16 @@ expression: "std::fs::read_to_string(file).unwrap()"
           }
         }
       },
-      "additionalProperties": false
+      "additionalProperties": {
+        "type": [
+          "boolean",
+          "object",
+          "array",
+          "number",
+          "string",
+          "integer"
+        ]
+      }
     }
   }
 }

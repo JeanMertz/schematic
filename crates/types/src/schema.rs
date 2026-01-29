@@ -189,6 +189,27 @@ impl Schema {
     pub fn set_type(&mut self, value: SchemaType) {
         self.ty = value;
     }
+
+    /// Return a non-null schema if available. If a null type,
+    /// returns `None`. If a union type, returns the first non-null
+    /// type or `None`. Otherwise, returns the current type.
+    pub fn get_nonnull_schema(&self) -> Option<&Schema> {
+        match &self.ty {
+            SchemaType::Null => None,
+            SchemaType::Union(inner) => {
+                for ty in &inner.variants_types {
+                    if ty.is_null() {
+                        continue;
+                    }
+
+                    return Some(ty);
+                }
+
+                None
+            }
+            _ => Some(self),
+        }
+    }
 }
 
 impl fmt::Display for Schema {
@@ -257,6 +278,9 @@ pub struct SchemaField {
         serde(default, skip_serializing_if = "Option::is_none")
     )]
     pub env_var: Option<String>,
+
+    #[cfg_attr(feature = "serde", serde(default, skip_serializing_if = "is_false"))]
+    pub flatten: bool,
 
     #[cfg_attr(feature = "serde", serde(default, skip_serializing_if = "is_false"))]
     pub hidden: bool,

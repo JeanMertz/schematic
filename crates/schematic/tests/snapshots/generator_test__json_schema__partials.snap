@@ -332,7 +332,16 @@ expression: "fs::read_to_string(file).unwrap()"
       ]
     }
   },
-  "additionalProperties": false,
+  "additionalProperties": {
+    "type": [
+      "boolean",
+      "object",
+      "array",
+      "number",
+      "string",
+      "integer"
+    ]
+  },
   "definitions": {
     "AnotherConfig": {
       "title": "AnotherConfig",
@@ -605,7 +614,16 @@ expression: "fs::read_to_string(file).unwrap()"
           ]
         }
       },
-      "additionalProperties": false
+      "additionalProperties": {
+        "type": [
+          "boolean",
+          "object",
+          "array",
+          "number",
+          "string",
+          "integer"
+        ]
+      }
     },
     "PartialAnotherConfig": {
       "title": "PartialAnotherConfig",

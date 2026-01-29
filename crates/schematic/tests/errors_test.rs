@@ -14,6 +14,10 @@ pub struct BaseConfig {
     nested: NestedConfig,
 }
 
+fn strip_ansi(s: &str) -> String {
+    String::from_utf8(strip_ansi_escapes::strip(s)).unwrap()
+}
+
 #[cfg(feature = "json")]
 mod json {
     use super::*;
@@ -21,14 +25,14 @@ mod json {
     #[test]
     fn invalid_type() {
         let error = ConfigLoader::<BaseConfig>::new()
-            .code(r#"{ "setting": 123 }"#, Format::Json)
+            .code(r#"{ "setting": 123 }"#, "code.json")
             .unwrap()
             .load()
             .err()
             .unwrap();
 
         assert_eq!(
-            error.to_full_string(),
+            strip_ansi(&error.to_full_string()),
             "Failed to parse BaseConfig. setting: invalid type: integer `123`, expected a boolean at line 1 column 16"
         )
     }
@@ -36,14 +40,14 @@ mod json {
     #[test]
     fn invalid_nested_type() {
         let error = ConfigLoader::<BaseConfig>::new()
-            .code(r#"{ "nested": { "setting": 123 } }"#, Format::Json)
+            .code(r#"{ "nested": { "setting": 123 } }"#, "code.json")
             .unwrap()
             .load()
             .err()
             .unwrap();
 
         assert_eq!(
-            error.to_full_string(),
+            strip_ansi(&error.to_full_string()),
             "Failed to parse BaseConfig. nested.setting: invalid type: integer `123`, expected a boolean at line 1 column 28"
         )
     }
@@ -63,11 +67,12 @@ mod pkl {
             .err()
             .unwrap();
 
-        println!("{}", error.to_full_string());
+        let error_str = strip_ansi(&error.to_full_string());
+        println!("{}", error_str);
 
         assert!(
             predicate::str::contains("setting: invalid type: integer `123`, expected a boolean")
-                .eval(&error.to_full_string())
+                .eval(&error_str)
         )
     }
 
@@ -80,13 +85,14 @@ mod pkl {
             .err()
             .unwrap();
 
-        println!("{}", error.to_full_string());
+        let error_str = strip_ansi(&error.to_full_string());
+        println!("{}", error_str);
 
         assert!(
             predicate::str::contains(
                 "nested.setting: invalid type: integer `123`, expected a boolean"
             )
-            .eval(&error.to_full_string())
+            .eval(&error_str)
         )
     }
 }
@@ -98,14 +104,14 @@ mod toml {
     #[test]
     fn invalid_type() {
         let error = ConfigLoader::<BaseConfig>::new()
-            .code("setting = 123", Format::Toml)
+            .code("setting = 123", "code.toml")
             .unwrap()
             .load()
             .err()
             .unwrap();
 
         assert_eq!(
-            error.to_full_string(),
+            strip_ansi(&error.to_full_string()),
             "Failed to parse BaseConfig. setting: invalid type: integer `123`, expected a boolean"
         )
     }
@@ -113,34 +119,34 @@ mod toml {
     #[test]
     fn invalid_nested_type() {
         let error = ConfigLoader::<BaseConfig>::new()
-            .code("[nested]\nsetting = 123", Format::Toml)
+            .code("[nested]\nsetting = 123", "code.toml")
             .unwrap()
             .load()
             .err()
             .unwrap();
 
         assert_eq!(
-            error.to_full_string(),
+            strip_ansi(&error.to_full_string()),
             "Failed to parse BaseConfig. nested.setting: invalid type: integer `123`, expected a boolean"
         )
     }
 }
 
-#[cfg(feature = "yml")]
+#[cfg(feature = "yaml")]
 mod yaml {
     use super::*;
 
     #[test]
     fn invalid_type() {
         let error = ConfigLoader::<BaseConfig>::new()
-            .code("---\nsetting: 123", Format::Yaml)
+            .code("---\nsetting: 123", "code.yaml")
             .unwrap()
             .load()
             .err()
             .unwrap();
 
         assert_eq!(
-            error.to_full_string(),
+            strip_ansi(&error.to_full_string()),
             "Failed to parse BaseConfig. setting: invalid type: integer `123`, expected a boolean"
         )
     }
@@ -148,14 +154,14 @@ mod yaml {
     #[test]
     fn invalid_nested_type() {
         let error = ConfigLoader::<BaseConfig>::new()
-            .code("---\nnested:\n  setting: 123", Format::Yaml)
+            .code("---\nnested:\n  setting: 123", "code.yaml")
             .unwrap()
             .load()
             .err()
             .unwrap();
 
         assert_eq!(
-            error.to_full_string(),
+            strip_ansi(&error.to_full_string()),
             "Failed to parse BaseConfig. nested.setting: invalid type: integer `123`, expected a boolean"
         )
     }

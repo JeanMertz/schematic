@@ -1,9 +1,9 @@
-use crate::format::Format;
 use crate::schema::RenderResult;
 use indexmap::IndexMap;
 use miette::miette;
 use schematic_types::*;
 use std::collections::{HashMap, VecDeque};
+use std::mem;
 
 /// Options to control the rendered template.
 pub struct TemplateOptions {
@@ -13,8 +13,11 @@ pub struct TemplateOptions {
     /// List of field names to render but comment out.
     pub comment_fields: Vec<String>,
 
-    /// Default values for each field within the root struct.
-    pub default_values: HashMap<String, SchemaType>,
+    /// Characters to prefix a comment line.
+    pub comment_prefix: String,
+
+    /// Custom values for each field. Supports dot notation.
+    pub custom_values: HashMap<String, Schema>,
 
     /// List of array and object field names to expand and render a fake item.
     pub expand_fields: Vec<String>,
@@ -33,6 +36,9 @@ pub struct TemplateOptions {
 
     /// Insert an extra newline between fields.
     pub newline_between_fields: bool,
+
+    /// List of field names to only render.
+    pub only_fields: Vec<String>,
 }
 
 impl Default for TemplateOptions {
@@ -40,13 +46,15 @@ impl Default for TemplateOptions {
         Self {
             comments: true,
             comment_fields: vec![],
-            default_values: HashMap::new(),
+            comment_prefix: "# ".into(),
+            custom_values: HashMap::new(),
             expand_fields: vec![],
             footer: String::new(),
             header: String::new(),
             hide_fields: vec![],
             indent_char: "  ".into(),
             newline_between_fields: true,
+            only_fields: vec![],
         }
     }
 }
@@ -83,15 +91,13 @@ pub struct TemplateContext {
     pub depth: usize,
     pub options: TemplateOptions,
 
-    format: Format,
     stack: VecDeque<String>,
 }
 
 impl TemplateContext {
-    pub fn new(format: Format, options: TemplateOptions) -> Self {
+    pub fn new(options: TemplateOptions) -> Self {
         Self {
             depth: 0,
-            format,
             options,
             stack: VecDeque::new(),
         }
@@ -141,8 +147,17 @@ impl TemplateContext {
             });
         }
 
-        if let Some(env_var) = &field.env_var {
-            push(format!("@envvar {env_var}"));
+        if let Some(env_var) = &field.env_var
+            && !env_var.is_empty()
+        {
+            push(format!("@env {env_var}"));
+        }
+
+        if let SchemaType::Enum(enu) = &field.schema.ty
+            && let Ok(enum_values) = render_enum_values(enu)
+            && !enum_values.is_empty()
+        {
+            push(format!("@values {enum_values}"));
         }
 
         if lines.is_empty() {
@@ -170,13 +185,7 @@ impl TemplateContext {
     }
 
     pub fn get_comment_prefix(&self) -> &str {
-        if self.format.is_pkl() {
-            "/// "
-        } else if self.format.is_json() {
-            "// "
-        } else {
-            "# "
-        }
+        &self.options.comment_prefix
     }
 
     pub fn get_stack_key(&self) -> String {
@@ -194,6 +203,12 @@ impl TemplateContext {
         key
     }
 
+    pub fn get_stack_value(&self) -> Option<Schema> {
+        let key = self.get_stack_key();
+
+        self.options.custom_values.get(&key).cloned()
+    }
+
     pub fn is_expanded(&self, key: &String) -> bool {
         self.options.expand_fields.contains(key)
     }
@@ -201,7 +216,9 @@ impl TemplateContext {
     pub fn is_hidden(&self, field: &SchemaField) -> bool {
         let key = self.get_stack_key();
 
-        field.hidden || self.options.hide_fields.contains(&key)
+        field.hidden
+            || self.options.hide_fields.contains(&key)
+            || !self.options.only_fields.is_empty() && !self.options.only_fields.contains(&key)
     }
 
     pub fn push_stack(&mut self, name: &str) {
@@ -221,6 +238,27 @@ impl TemplateContext {
 
         initial.to_owned()
     }
+
+    pub fn validate_schema_variant<'a>(
+        &self,
+        custom: Option<&'a Schema>,
+        fallback: &'a Schema,
+    ) -> &'a Schema {
+        if let Some(custom) = custom {
+            if mem::discriminant(&custom.ty) == mem::discriminant(&fallback.ty) {
+                return custom;
+            } else {
+                panic!(
+                    "Received an invalid custom value for `{}`, mismatched schema types.\n\nExpected: {:#?}\n\nReceived: {:#?}",
+                    self.get_stack_key(),
+                    fallback,
+                    custom
+                );
+            }
+        }
+
+        fallback
+    }
 }
 
 pub fn render_array(_array: &ArrayType) -> RenderResult {
@@ -236,13 +274,33 @@ pub fn render_boolean(boolean: &BooleanType) -> RenderResult {
 }
 
 pub fn render_enum(enu: &EnumType) -> RenderResult {
-    if let Some(index) = &enu.default_index {
-        if let Some(value) = enu.values.get(*index) {
-            return Ok(lit_to_string(value));
-        }
+    let index = enu.default_index.unwrap_or(0);
+
+    if let Some(value) = enu.values.get(index) {
+        return Ok(lit_to_string(value));
     }
 
     render_null()
+}
+
+pub fn render_enum_values(enu: &EnumType) -> RenderResult {
+    let values: Vec<String> = match &enu.variants {
+        Some(variants) => variants
+            .iter()
+            .filter_map(|(_, variant)| {
+                if variant.hidden {
+                    None
+                } else if let SchemaType::Literal(lit) = &variant.schema.ty {
+                    Some(lit_to_string(&lit.value))
+                } else {
+                    None
+                }
+            })
+            .collect(),
+        None => enu.values.iter().map(lit_to_string).collect(),
+    };
+
+    Ok(values.join(" | "))
 }
 
 pub fn render_float(float: &FloatType) -> RenderResult {
@@ -315,6 +373,10 @@ pub fn render_union(
         if let Some(variant) = uni.variants_types.iter().find(|v| !v.is_null()) {
             return render(variant);
         }
+    }
+
+    if let Some(variant) = uni.variants_types.first() {
+        return render(variant);
     }
 
     render_null()

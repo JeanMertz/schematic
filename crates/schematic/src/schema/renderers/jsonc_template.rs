@@ -1,5 +1,4 @@
 use super::template::*;
-use crate::format::Format;
 use crate::schema::{RenderResult, SchemaRenderer};
 use indexmap::IndexMap;
 use schematic_types::*;
@@ -16,9 +15,11 @@ impl JsoncTemplateRenderer {
         JsoncTemplateRenderer::new(TemplateOptions::default())
     }
 
-    pub fn new(options: TemplateOptions) -> Self {
+    pub fn new(mut options: TemplateOptions) -> Self {
+        options.comment_prefix = "// ".into();
+
         JsoncTemplateRenderer {
-            ctx: TemplateContext::new(Format::Json, options),
+            ctx: TemplateContext::new(options),
             schemas: IndexMap::default(),
         }
     }
@@ -116,13 +117,20 @@ impl SchemaRenderer<String> for JsoncTemplateRenderer {
         self.ctx.depth += 1;
 
         for (index, (name, field)) in structure.fields.iter().enumerate() {
+            if field.flatten {
+                continue;
+            }
+
             self.ctx.push_stack(name);
 
             if !self.ctx.is_hidden(field) {
                 let prop = format!(
                     "\"{}\": {}{}",
                     name,
-                    self.render_schema(&field.schema)?,
+                    self.render_schema(self.ctx.validate_schema_variant(
+                        self.ctx.get_stack_value().as_ref(),
+                        &field.schema
+                    ))?,
                     if index == last_index { "" } else { "," }
                 );
 

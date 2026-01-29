@@ -1,7 +1,5 @@
-use crate::config::{
-    ExtendsFrom, Path, PathSegment, ValidateError, ValidateResult, is_file_like, is_secure_url,
-    is_source_format, is_url_like,
-};
+use crate::config::{ExtendsFrom, Path, PathSegment, ValidateError, ValidateResult};
+use crate::helpers::*;
 
 /// Validate an `extend` value is either a file path or secure URL.
 pub fn extends_string<D, C>(
@@ -16,12 +14,6 @@ pub fn extends_string<D, C>(
     if !is_url && !is_file {
         return Err(ValidateError::new(
             "only file paths and URLs can be extended",
-        ));
-    }
-
-    if !value.is_empty() && !is_source_format(value) {
-        return Err(ValidateError::new(
-            "invalid format, try a supported extension",
         ));
     }
 
@@ -63,4 +55,34 @@ pub fn extends_from<D, C>(
     };
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn string_valid() {
+        assert!(extends_string("file.yml", &(), &(), false).is_ok());
+        assert!(extends_string("./file.json", &(), &(), false).is_ok());
+        assert!(extends_string("../file.yaml", &(), &(), false).is_ok());
+        assert!(extends_string("/nested/file.toml", &(), &(), false).is_ok());
+        assert!(extends_string("https://domain.com/file.yml", &(), &(), false).is_ok());
+        assert!(extends_string("https://domain.com/nested/file.toml", &(), &(), false).is_ok());
+        assert!(
+            extends_string(
+                "https://domain.com/nested/file.toml?query=string",
+                &(),
+                &(),
+                false
+            )
+            .is_ok()
+        );
+    }
+
+    #[test]
+    fn string_invalid() {
+        // no http
+        assert!(extends_string("http://domain.com/nested/file.json", &(), &(), false).is_err());
+    }
 }

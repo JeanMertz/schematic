@@ -1,13 +1,10 @@
 [book]
 authors = ["Miles Johnson"]
 language = "en"
-multilingual = false
 src = "src"
 title = "Schematic"
 
 [output.html]
-curly-quotes = true
 git-repository-url = "https://github.com/moonrepo/schematic"
-git-repository-icon = "fa-github"
 
-[output.linkcheck]
+# [output.linkcheck]

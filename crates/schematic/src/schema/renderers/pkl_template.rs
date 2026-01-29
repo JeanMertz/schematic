@@ -1,5 +1,4 @@
 use super::template::*;
-use crate::format::Format;
 use crate::schema::{RenderResult, SchemaRenderer};
 use indexmap::IndexMap;
 use schematic_types::*;
@@ -16,9 +15,11 @@ impl PklTemplateRenderer {
         PklTemplateRenderer::new(TemplateOptions::default())
     }
 
-    pub fn new(options: TemplateOptions) -> Self {
+    pub fn new(mut options: TemplateOptions) -> Self {
+        options.comment_prefix = "/// ".into();
+
         PklTemplateRenderer {
-            ctx: TemplateContext::new(Format::Pkl, options),
+            ctx: TemplateContext::new(options),
             schemas: IndexMap::default(),
         }
     }
@@ -124,6 +125,10 @@ impl SchemaRenderer<String> for PklTemplateRenderer {
         self.ctx.depth += 1;
 
         for (name, field) in &structure.fields {
+            if field.flatten {
+                continue;
+            }
+
             self.ctx.push_stack(name);
 
             if !self.ctx.is_hidden(field) {
@@ -131,7 +136,10 @@ impl SchemaRenderer<String> for PklTemplateRenderer {
                     "{}{}{}",
                     name,
                     if field.schema.is_struct() { " " } else { " = " },
-                    self.render_schema(&field.schema)?,
+                    self.render_schema(self.ctx.validate_schema_variant(
+                        self.ctx.get_stack_value().as_ref(),
+                        &field.schema
+                    ))?,
                 );
 
                 out.push(self.ctx.create_field(field, prop));

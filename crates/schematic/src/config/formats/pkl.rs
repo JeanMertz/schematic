@@ -1,11 +1,15 @@
 use crate::config::error::ConfigError;
 use crate::config::parser::ParserError;
+use crate::config::source::*;
 use miette::NamedSource;
-use rpkl::pkl::PklSerialize;
+use rpkl::{EvaluatorOptions, pkl::PklSerialize};
 use serde::de::DeserializeOwned;
 use std::env;
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
+
+#[allow(unused_imports)]
+pub use rpkl::{api::external_reader::*, api::reader::*};
 
 static PKL_CHECKED: AtomicBool = AtomicBool::new(false);
 
@@ -33,37 +37,61 @@ fn check_pkl_installed() -> Result<(), ConfigError> {
     Ok(())
 }
 
-pub fn parse<D>(name: &str, content: &str, file_path: Option<&Path>) -> Result<D, ConfigError>
-where
-    D: DeserializeOwned,
-{
-    check_pkl_installed()?;
+pub type PklFormatOptions = EvaluatorOptions;
 
-    let Some(file_path) = file_path else {
-        return Err(ConfigError::PklFileRequired);
-    };
+#[derive(Default)]
+pub struct PklFormat {
+    options: PklFormatOptions,
+}
 
-    let handle_error = |error: rpkl::Error| ConfigError::PklEvalFailed {
-        path: file_path.to_path_buf(),
-        error: Box::new(error),
-    };
+impl PklFormat {
+    pub fn new(options: PklFormatOptions) -> Self {
+        Self { options }
+    }
+}
 
-    // Based on `rpkl::from_config`
-    let ast = rpkl::api::Evaluator::new()
-        .map_err(handle_error)?
-        .evaluate_module(file_path)
-        .map_err(handle_error)?
-        .serialize_pkl_ast()
-        .map_err(handle_error)?;
+impl<T: DeserializeOwned> SourceFormat<T> for PklFormat {
+    fn should_parse(&self, source: &Source) -> bool {
+        source.get_file_ext() == Some("pkl")
+    }
 
-    let mut de = rpkl::pkl::Deserializer::from_pkl_map(&ast);
+    fn parse(
+        &self,
+        source: &Source,
+        content: &str,
+        cache_path: Option<&Path>,
+    ) -> Result<T, ConfigError> {
+        check_pkl_installed()?;
 
-    let result: D = serde_path_to_error::deserialize(&mut de).map_err(|error| ParserError {
-        content: NamedSource::new(name, content.to_owned()),
-        path: error.path().to_string(),
-        span: None, // TODO
-        message: error.inner().to_string(),
-    })?;
+        let Some(file_path) = cache_path.or_else(|| match source {
+            Source::File { path, .. } => Some(path),
+            _ => None,
+        }) else {
+            return Err(ConfigError::PklFileRequired);
+        };
 
-    Ok(result)
+        let handle_error = |error: rpkl::Error| ConfigError::PklEvalFailed {
+            path: file_path.to_path_buf(),
+            error: Box::new(error),
+        };
+
+        // Based on `rpkl::from_config`
+        let ast = rpkl::api::Evaluator::new_from_options(self.options.clone())
+            .map_err(handle_error)?
+            .evaluate_module(file_path)
+            .map_err(handle_error)?
+            .serialize_pkl_ast()
+            .map_err(handle_error)?;
+
+        let mut de = rpkl::pkl::Deserializer::from_pkl_map(&ast);
+
+        let result: T = serde_path_to_error::deserialize(&mut de).map_err(|error| ParserError {
+            content: NamedSource::new(source.get_file_name(), content.to_owned()),
+            path: error.path().to_string(),
+            span: None,
+            message: error.inner().to_string(),
+        })?;
+
+        Ok(result)
+    }
 }

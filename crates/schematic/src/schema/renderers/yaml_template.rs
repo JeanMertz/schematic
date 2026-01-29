@@ -1,5 +1,4 @@
 use super::template::*;
-use crate::format::Format;
 use crate::schema::{RenderResult, SchemaRenderer};
 use indexmap::IndexMap;
 use schematic_types::*;
@@ -18,7 +17,7 @@ impl YamlTemplateRenderer {
 
     pub fn new(options: TemplateOptions) -> Self {
         YamlTemplateRenderer {
-            ctx: TemplateContext::new(Format::Yaml, options),
+            ctx: TemplateContext::new(options),
             schemas: IndexMap::default(),
         }
     }
@@ -120,6 +119,10 @@ impl SchemaRenderer<String> for YamlTemplateRenderer {
         let mut out = vec![];
 
         for (name, field) in &structure.fields {
+            if field.flatten {
+                continue;
+            }
+
             self.ctx.push_stack(name);
 
             if self.ctx.is_hidden(field) {
@@ -133,7 +136,11 @@ impl SchemaRenderer<String> for YamlTemplateRenderer {
                 self.ctx.depth += 1;
             }
 
-            let value = self.render_schema(&field.schema)?;
+            let value = self.render_schema(
+                self.ctx
+                    .validate_schema_variant(self.ctx.get_stack_value().as_ref(), &field.schema),
+            )?;
+
             let prop = format!(
                 "{}:{}{}",
                 name,

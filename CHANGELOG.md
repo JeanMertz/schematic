@@ -1,5 +1,94 @@
 # Changelog
 
+## 0.19.4
+
+#### 🐞 Fixes
+
+- Fixed an incorrect double nested object for flattened fields.
+
+## 0.19.3
+
+#### 🚀 Updates
+
+- Added `#[serde(flatten)]` support to schema generation.
+  - Added `SchemaField.flatten` field.
+  - Updated `JsonSchemaRenderer` to render flattened fields as `additionalProperties`.
+  - Updated `TypeScriptRenderer` to render flattened fields as index signatures & intersection
+    types.
+  - Updated `TemplateRenderer`s to skip rendering flattened fields.
+- Updated `#[serde(untagged)]` enums to render better error messages based on the variant types.
+
+## 0.19.2
+
+#### ⚙️ Internal
+
+- Updated `reqwest` to v0.13.
+- Updated `rpkl` to v0.7.
+- Updated dependencies.
+
+## 0.19.1
+
+#### 🚀 Updates
+
+- Updated enums/unions in templates to render the first item by default, instead of null.
+
+## 0.19.0
+
+#### 💥 Breaking
+
+This release changes how formats work. Instead of using the `Format` enum, formats now implement the
+`SourceFormat` trait. This allows for custom formats to be created and used with the `ConfigLoader`.
+
+- Updated `ConfigLoader::new()` to auto-register formats based on enabled features. Use
+  `ConfigLoader::default()` to create a loader without formats.
+- Updated `ConfigLoader#code()` to require a file name/path as the 2nd argument, instead of the
+  `Format` enum. The file extension will be used to determine the format.
+- Reworked the `Source` enum heavily.
+- Renamed the `extract_ext` function to `extract_file_ext`, and updated it to not include the
+  leading `.`.
+- Replaced `serde_yaml` with `serde_norway` for YAML parsing. This is due to `serde_yaml` being
+  unmaintained.
+- Removed the `Format` enum.
+- Removed the `yml` feature, use `yaml` instead.
+- Removed the `is_source_format` function.
+
+#### 🚀 Updates
+
+- Added `.jsonc` support.
+- Added a `SourceFormat` trait, with built-in formats available at `schematic::config::formats`.
+- Added a `ConfigLoader#add_format()` method.
+- Added a `extract_file_name` function.
+- Added `TemplateOptions.custom_values` for specifying custom values for specific fields in a
+  template.
+- Added `TemplateOptions.only_fields` to only render specific fields in a template.
+- Added options to `PklFormat`, allowing custom readers to be defined.
+
+#### ⚙️ Internal
+
+- Updated to Rust v1.91.
+- Updated `rpkl` to v0.6.
+- Updated `ron` to v0.12.
+- Updated dependencies.
+
+## 0.18.15
+
+#### 🚀 Updates
+
+- Added `@values` tag to YAML renderer showing all possible enum values.
+
+## 0.18.14
+
+#### 🐞 Fixes
+
+- Fixed an issue where source URLs that contain a query string would not be parsed.
+
+## 0.18.13
+
+#### 🐞 Fixes
+
+- Fixed a description issue when building the schema.
+- Fixed `extends` validation not supporting query strings in the a URL.
+
 ## 0.18.12
 
 #### 🚀 Updates

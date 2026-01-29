@@ -1,6 +1,6 @@
 #![allow(clippy::result_large_err)]
 
-mod format;
+pub mod helpers;
 
 #[cfg(feature = "config")]
 mod config;
@@ -35,6 +35,8 @@ pub use config::*;
 #[doc(hidden)]
 pub use ::serde;
 
-pub use format::*;
 pub use schematic_macros::*;
 pub use schematic_types::{Schema, SchemaBuilder, SchemaType, Schematic};
+
+// Re-export serde_content for use in macros
+pub use serde_content;

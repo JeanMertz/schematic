@@ -25,6 +25,7 @@ pub struct VariantArgs {
     pub null: bool,
 
     // config
+    pub literal: Option<String>,
     pub default: bool,
     pub merge: Option<ExprPath>,
     pub nested: bool,
@@ -199,7 +200,11 @@ impl Variant<'_> {
                 }
             }
             Fields::Unit => {
-                if self.args.null || untagged {
+                if let Some(literal) = &self.args.literal {
+                    quote! {
+                        Schema::literal_value(LiteralValue::String(#literal.into()))
+                    }
+                } else if self.args.null || untagged {
                     quote! {
                         Schema::null()
                     }

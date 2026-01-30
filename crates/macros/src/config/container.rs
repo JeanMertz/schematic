@@ -746,10 +746,6 @@ impl Container<'_> {
                     .predicates
                     .push(parse_quote!(#ident: schematic::Schematic));
             }
-
-            // where_clause
-            //     .predicates
-            //     .push(parse_quote!(D: #serde::Deserializer<'de>));
         }
         let where_clause = where_clause.clone();
         let (_, ty_generics, _) = generics1.split_for_impl();
@@ -762,6 +758,7 @@ impl Container<'_> {
                     D: serde::Deserializer<'de>,
                 {
                     use serde::de::Error as _;
+                    use std::fmt::Write as _;
 
                     // Buffer the content so we can try deserializing it multiple ways
                     let content = deserializer.deserialize_any(schematic::serde_content::ValueVisitor)?;
@@ -773,7 +770,7 @@ impl Container<'_> {
                     // All variants failed, build the combined error message
                     let mut error_msg = format!("failed to parse as any variant of {}:", stringify!(#partial_name));
                     for (variant_name, error) in &errors {
-                        error_msg.push_str(&format!("\n- {}: {}", variant_name, error));
+                        let _ = write!(error_msg, "\n- {}: {}", variant_name, error);
                     }
 
                     Err(D::Error::custom(error_msg))

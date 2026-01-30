@@ -39,6 +39,9 @@ pub struct TemplateOptions {
 
     /// List of field names to only render.
     pub only_fields: Vec<String>,
+
+    /// Print the list of enum values for enum fields.
+    pub print_enum_values: bool,
 }
 
 impl Default for TemplateOptions {
@@ -55,6 +58,7 @@ impl Default for TemplateOptions {
             indent_char: "  ".into(),
             newline_between_fields: true,
             only_fields: vec![],
+            print_enum_values: true,
         }
     }
 }
@@ -156,6 +160,7 @@ impl TemplateContext {
         if let SchemaType::Enum(enu) = &field.schema.ty
             && let Ok(enum_values) = render_enum_values(enu)
             && !enum_values.is_empty()
+            && self.options.print_enum_values
         {
             push(format!("@values {enum_values}"));
         }

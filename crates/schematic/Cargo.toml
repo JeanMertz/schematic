@@ -11,7 +11,7 @@ rust-version = "1.85.0"
 
 [package.metadata.release]
 pre-release-replacements = [
-	{ file = "../../CHANGELOG.md", search = "Unreleased", replace = "{{version}}" },
+  { file = "../../CHANGELOG.md", search = "Unreleased", replace = "{{version}}" },
 ]
 
 [package.metadata.docs.rs]
@@ -21,17 +21,17 @@ all-features = true
 schematic_macros = { version = "0.19.3", path = "../macros" }
 schematic_types = { version = "0.11.3", path = "../types" }
 miette = { workspace = true }
-serde-content = "0.1.2"
-thiserror = "2.0.17"
+serde-content = "0.1"
+thiserror = "2"
 tracing = { workspace = true }
 
 # config
-garde = { version = "0.22.1", default-features = false, optional = true, features = [
-	"regex",
+garde = { version = "0.22", default-features = false, optional = true, features = [
+  "regex",
 ] }
 serde = { workspace = true }
-serde_path_to_error = { version = "0.1.20", optional = true }
-starbase_styles = { version = "0.6.5", optional = true }
+serde_path_to_error = { version = "0.1", optional = true }
+starbase_styles = { version = "0.6", optional = true }
 
 # settings
 regex = { workspace = true, optional = true }
@@ -42,14 +42,14 @@ convert_case = { workspace = true, optional = true }
 indexmap = { workspace = true, optional = true, features = ["serde"] }
 
 # json
-json-strip-comments = { version = "3.1.0", optional = true }
+json-strip-comments = { version = "3", optional = true }
 serde_json = { workspace = true, optional = true, features = [
-	"preserve_order",
+  "preserve_order",
 ] }
 
 # json schema
-markdown = { version = "1.0.0", optional = true }
-schemars = { version = "0.8.22", optional = true, default-features = false }
+markdown = { version = "1", optional = true }
+schemars = { version = "1", optional = true, default-features = false }
 
 # pkl
 rpkl = { workspace = true, optional = true }
@@ -69,9 +69,9 @@ reqwest = { workspace = true, optional = true, features = ["blocking"] }
 [features]
 default = ["config", "env", "extends", "validate"]
 config = [
-	"dep:serde_path_to_error",
-	"dep:starbase_styles",
-	"schematic_macros/config",
+  "dep:serde_path_to_error",
+  "dep:starbase_styles",
+  "schematic_macros/config",
 ]
 schema = ["dep:convert_case", "dep:indexmap", "schematic_macros/schema"]
 schema_serde = ["schema", "schematic_types/serde"]
@@ -85,9 +85,9 @@ validate = ["dep:garde", "schematic_macros/validate"]
 
 # Formats
 json = [
-	"dep:json-strip-comments",
-	"dep:serde_json",
-	"schematic_types/serde_json",
+  "dep:json-strip-comments",
+  "dep:serde_json",
+  "schematic_types/serde_json",
 ]
 pkl = ["dep:rpkl", "schematic_types/serde_rpkl"]
 ron = ["dep:ron", "schematic_types/serde_ron"]
@@ -115,39 +115,39 @@ validate_url = ["validate", "garde/url"]
 
 [dev-dependencies]
 schematic = { path = ".", features = [
-	"config",
-	"env",
-	"extends",
-	"json",
-	"pkl",
-	"renderer_json_schema",
-	"renderer_template",
-	"renderer_typescript",
-	"ron",
-	"schema",
-	"schema_serde",
-	"toml",
-	"tracing",
-	"type_chrono",
-	"type_indexmap",
-	"type_regex",
-	"type_relative_path",
-	"type_rust_decimal",
-	"type_semver",
-	"type_url",
-	"type_uuid",
-	"url",
-	"validate",
-	"validate_email",
-	"validate_url",
-	"yaml",
+  "config",
+  "env",
+  "extends",
+  "json",
+  "pkl",
+  "renderer_json_schema",
+  "renderer_template",
+  "renderer_typescript",
+  "ron",
+  "schema",
+  "schema_serde",
+  "toml",
+  "tracing",
+  "type_chrono",
+  "type_indexmap",
+  "type_regex",
+  "type_relative_path",
+  "type_rust_decimal",
+  "type_semver",
+  "type_url",
+  "type_uuid",
+  "url",
+  "validate",
+  "validate_email",
+  "validate_url",
+  "yaml",
 ] }
 reqwest = { workspace = true, features = ["blocking", "rustls"] }
-serial_test = "3.3.1"
-similar = "2.7.0"
+serial_test = "3"
+similar = "2"
 starbase_sandbox = { workspace = true }
 strip-ansi-escapes = "0.2"
-derive_more = { version = "2.1.1", features = ["try_into", "as_ref"] }
+derive_more = { version = "2", features = ["try_into", "as_ref"] }
 
 # Types
 chrono = { workspace = true, features = ["serde"] }

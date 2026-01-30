@@ -272,8 +272,7 @@ impl<T: Config> ConfigLoader<T> {
     fn parse_into_layers(
         &self,
         sources_to_parse: &[Source],
-        #[cfg_attr(not(feature = "schema"), allow(unused_variables))]
-        context: &<T::Partial as PartialConfig>::Context,
+        #[allow(unused_variables)] context: &<T::Partial as PartialConfig>::Context,
     ) -> Result<Vec<Layer<T>>, ConfigError> {
         let mut layers: Vec<Layer<T>> = vec![];
 

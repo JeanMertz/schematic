@@ -1,7 +1,7 @@
 use crate::common::Container;
-use proc_macro2::{Ident, TokenStream};
+use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
-use syn::{Generics, parse_quote};
+use syn::{GenericParam, Generics, Lifetime, parse_quote};
 
 impl Container<'_> {
     pub fn generate_empty_values(&self) -> TokenStream {
@@ -472,6 +472,7 @@ impl Container<'_> {
         partial_attrs: &[TokenStream],
         partial_generics: &Generics,
         deserialize_derive: bool,
+        is_untagged: bool,
     ) -> TokenStream {
         let serde = quote! { ::schematic::serde };
 
@@ -505,7 +506,7 @@ impl Container<'_> {
             }
         }
 
-        let de_derive = if deserialize_derive {
+        let de_derive = if deserialize_derive && !is_untagged {
             Some(quote! { #[derive(#serde::Deserialize)] })
         } else {
             None
@@ -612,28 +613,22 @@ impl Container<'_> {
                     quote! { panic!("No variant has been marked as default!"); }
                 };
 
-                if is_untagged {
-                    // For untagged enums, generate custom Deserialize that collects all errors
-                    let deserialize_impl =
-                        self.generate_untagged_deserialize(partial_name, variants);
-
-                    quote! {
-                        impl Default for #partial_name {
-                            fn default() -> Self {
-                                #default_impl
-                            }
-                        }
-
-                        #deserialize_impl
-                    }
+                let deserialize_impl = if is_untagged {
+                    // For untagged enums, generate custom Deserialize that
+                    // collects all errors.
+                    self.generate_untagged_deserialize(partial_name, variants, partial_generics)
                 } else {
-                    quote! {
-                        impl #impl_generics Default for #partial_name #ty_generics #where_clause {
-                            fn default() -> Self {
-                                #default_impl
-                            }
+                    quote! {}
+                };
+
+                quote! {
+                    impl #impl_generics Default for #partial_name #ty_generics #where_clause {
+                        fn default() -> Self {
+                            #default_impl
                         }
                     }
+
+                    #deserialize_impl
                 }
             }
         }
@@ -643,6 +638,7 @@ impl Container<'_> {
         &self,
         partial_name: &Ident,
         variants: &[crate::common::Variant<'_>],
+        partial_generics: &Generics,
     ) -> TokenStream {
         use syn::Fields;
 
@@ -729,8 +725,38 @@ impl Container<'_> {
             }
         }
 
+        let serde = quote! { ::schematic::serde };
+        let mut generics1 = partial_generics.clone();
+        let mut generics2 = generics1.clone();
+        let lt_de = Lifetime::new("'de", Span::call_site());
+        generics2
+            .params
+            .insert(0, GenericParam::Lifetime(syn::LifetimeParam::new(lt_de)));
+        let (impl_generics, _, _) = generics2.split_for_impl();
+
+        let where_clause = generics1.make_where_clause();
+        for tp in partial_generics.type_params() {
+            let ident = &tp.ident;
+
+            where_clause.predicates
+                .push(parse_quote!(#ident: Clone + PartialEq + #serde::Serialize + #serde::de::DeserializeOwned));
+
+            if self.has_nested() {
+                where_clause
+                    .predicates
+                    .push(parse_quote!(#ident: schematic::Schematic));
+            }
+
+            // where_clause
+            //     .predicates
+            //     .push(parse_quote!(D: #serde::Deserializer<'de>));
+        }
+        let where_clause = where_clause.clone();
+        let (_, ty_generics, _) = generics1.split_for_impl();
+
         quote! {
-            impl<'de> serde::Deserialize<'de> for #partial_name {
+            impl #impl_generics #serde::Deserialize<'de> for #partial_name #ty_generics #where_clause {
+            // impl<'de> serde::Deserialize<'de> for #partial_name {
                 fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
                 where
                     D: serde::Deserializer<'de>,

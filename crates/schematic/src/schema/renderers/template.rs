@@ -42,6 +42,10 @@ pub struct TemplateOptions {
 
     /// Print the list of enum values for enum fields.
     pub print_enum_values: bool,
+
+    /// List of custom environment variables to use for fields. Supports dot
+    /// notation.
+    pub env_vars: HashMap<String, String>,
 }
 
 impl Default for TemplateOptions {
@@ -59,6 +63,7 @@ impl Default for TemplateOptions {
             newline_between_fields: true,
             only_fields: vec![],
             print_enum_values: true,
+            env_vars: HashMap::new(),
         }
     }
 }
@@ -124,6 +129,8 @@ impl TemplateContext {
     }
 
     pub fn create_field_comment(&self, field: &SchemaField) -> String {
+        let key = self.get_stack_key();
+
         if !self.options.comments {
             return String::new();
         }
@@ -151,7 +158,10 @@ impl TemplateContext {
             });
         }
 
-        if let Some(env_var) = &field.env_var
+        if let Some(env_var) = &field
+            .env_var
+            .as_ref()
+            .or_else(|| self.options.env_vars.get(&key))
             && !env_var.is_empty()
         {
             push(format!("@env {env_var}"));

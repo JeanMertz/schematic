@@ -556,6 +556,7 @@ impl Container<'_> {
         &self,
         partial_name: &Ident,
         partial_generics: &Generics,
+        deserialize_derive: bool,
         is_untagged: bool,
     ) -> TokenStream {
         let serde = quote! { ::schematic::serde };
@@ -613,7 +614,7 @@ impl Container<'_> {
                     quote! { panic!("No variant has been marked as default!"); }
                 };
 
-                let deserialize_impl = if is_untagged {
+                let deserialize_impl = if deserialize_derive && is_untagged {
                     // For untagged enums, generate custom Deserialize that
                     // collects all errors.
                     self.generate_untagged_deserialize(partial_name, variants, partial_generics)

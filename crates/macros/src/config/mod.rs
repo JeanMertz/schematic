@@ -76,9 +76,12 @@ impl ToTokens for ConfigMacro<'_> {
             !cfg.args.no_deserialize_derive,
             is_untagged,
         );
-        let partial_default_impl =
-            cfg.type_of
-                .generate_partial_default_impl(&partial_name, cfg.generics, is_untagged);
+        let partial_default_impl = cfg.type_of.generate_partial_default_impl(
+            &partial_name,
+            cfg.generics,
+            !cfg.args.no_deserialize_derive,
+            is_untagged,
+        );
 
         tokens.extend(quote! {
             #partial

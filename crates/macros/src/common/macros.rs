@@ -48,6 +48,10 @@ pub struct MacroArgs {
     pub rename_all_fields: Option<String>,
     pub serde: SerdeMeta,
     pub no_deserialize_derive: bool,
+
+    // Quick hack to avoid `is_untagged` to generate a custom Deserialize impl,
+    // which ignores any custom serde tags on an enum.
+    pub skip_custom_untagged_enum_deserialize_impl: bool,
 }
 
 #[derive(Default, Debug)]
@@ -303,6 +307,7 @@ impl<'l> Macro<'l> {
     }
 
     pub fn is_untagged(&self) -> bool {
-        self.args.serde.untagged || self.serde_args.untagged
+        (self.args.serde.untagged || self.serde_args.untagged)
+            && !self.args.skip_custom_untagged_enum_deserialize_impl
     }
 }

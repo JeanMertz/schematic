@@ -1,8 +1,11 @@
+#![allow(unused_assignments, unused_variables)]
+
 use super::merger::MergeError;
 use super::parser::ParserError;
 #[cfg(feature = "validate")]
 use super::validator::ValidatorError;
 use miette::Diagnostic;
+#[cfg(feature = "color")]
 use starbase_styles::{Style, Stylize};
 use std::fmt::Display;
 use std::path::PathBuf;
@@ -18,11 +21,13 @@ pub enum ConfigError {
     Merge(#[from] Box<MergeError>),
 
     #[diagnostic(code(config::enums::invalid_fallback))]
-    #[error("Invalid fallback variant {}, unable to parse type.", .0.style(Style::Symbol))]
+    #[cfg_attr(feature = "color", error("Invalid fallback variant {}, unable to parse type.", .0.style(Style::Symbol)))]
+    #[cfg_attr(not(feature = "color"), error("Invalid fallback variant {}, unable to parse type.", .0))]
     EnumInvalidFallback(String),
 
     #[diagnostic(code(config::enums::unknown_variant))]
-    #[error("Unknown enum variant {}.", .0.style(Style::Id))]
+    #[cfg_attr(feature = "color", error("Unknown enum variant {}.", .0.style(Style::Id)))]
+    #[cfg_attr(not(feature = "color"), error("Unknown enum variant {}.", .0))]
     EnumUnknownVariant(String),
 
     #[diagnostic(code(config::extends::no_source_code))]
@@ -34,7 +39,8 @@ pub enum ConfigError {
     ExtendsFromParentFileOnly,
 
     #[diagnostic(code(config::url::https_only))]
-    #[error("Only secure URLs are allowed, received {}.", .0.style(Style::Url))]
+    #[cfg_attr(feature = "color", error("Only secure URLs are allowed, received {}.", .0.style(Style::Url)))]
+    #[cfg_attr(not(feature = "color"), error("Only secure URLs are allowed, received {}.", .0))]
     HttpsOnly(String),
 
     #[diagnostic(code(config::code::invalid))]
@@ -46,7 +52,8 @@ pub enum ConfigError {
     InvalidDefaultValue(String),
 
     #[diagnostic(code(config::required))]
-    #[error("Missing required value for field {}.", .fields.join(".").style(Style::Property))]
+    #[cfg_attr(feature = "color", error("Missing required value for field {}.", .fields.join(".").style(Style::Property)))]
+    #[cfg_attr(not(feature = "color"), error("Missing required value for field {}.", .fields.join(".")))]
     MissingRequired { fields: Vec<String> },
 
     #[diagnostic(code(config::file::invalid))]
@@ -58,22 +65,28 @@ pub enum ConfigError {
     InvalidUrl,
 
     #[diagnostic(code(config::file::missing), help("Is the path absolute?"))]
-    #[error("File path {} does not exist.", .0.style(Style::Path))]
+    #[cfg_attr(feature = "color", error("File path {} does not exist.", .0.style(Style::Path)))]
+    #[cfg_attr(not(feature = "color"), error("File path {} does not exist.", .0.display()))]
     MissingFile(PathBuf),
 
+    #[allow(unused_assignments)]
     #[diagnostic(
         code(config::format::no_matching),
         help("Is there a format registered for the file extension?")
     )]
-    #[error(
+    #[cfg_attr(feature = "color", error(
         "Unable to parse {} as there's no matching source format for extension {}.",
         .src.style(Style::Path),
-        .ext.style(Style::File)
-    )]
+        .ext.style(Style::File),
+    ))]
+    #[cfg_attr(not(feature = "color"), error(
+        "Unable to parse {} as there's no matching source format for extension {}.", .src, .ext
+    ))]
     NoMatchingFormat { src: String, ext: String },
 
     #[diagnostic(code(config::file::read_failed))]
-    #[error("Failed to read file {}.", .path.style(Style::Path))]
+    #[cfg_attr(feature = "color", error("Failed to read file {}.", .path.style(Style::Path)))]
+    #[cfg_attr(not(feature = "color"), error("Failed to read file {}.", .path.display()))]
     ReadFileFailed {
         path: PathBuf,
         #[source]
@@ -82,7 +95,8 @@ pub enum ConfigError {
 
     #[cfg(feature = "url")]
     #[diagnostic(code(config::url::read_failed))]
-    #[error("Failed to read URL {}.", .url.style(Style::Url))]
+    #[cfg_attr(feature = "color", error("Failed to read URL {}.", .url.style(Style::Url)))]
+    #[cfg_attr(not(feature = "color"), error("Failed to read URL {}.", .url))]
     ReadUrlFailed {
         url: String,
         #[source]
@@ -91,7 +105,8 @@ pub enum ConfigError {
 
     #[cfg(feature = "json")]
     #[diagnostic(code(config::json::failed))]
-    #[error("Failed to strip comments from {}.", .file.style(Style::File))]
+    #[cfg_attr(feature = "color", error("Failed to strip comments from {}.", .file.style(Style::File)))]
+    #[cfg_attr(not(feature = "color"), error("Failed to strip comments from {}.", .file))]
     JsonStripCommentsFailed {
         file: String,
         #[source]
@@ -100,7 +115,8 @@ pub enum ConfigError {
 
     #[cfg(feature = "pkl")]
     #[diagnostic(code(config::pkl::failed))]
-    #[error("Failed to evaluate Pkl file {}.", .path.style(Style::Path))]
+    #[cfg_attr(feature = "color", error("Failed to evaluate Pkl file {}.", .path.style(Style::Path)))]
+    #[cfg_attr(not(feature = "color"), error("Failed to evaluate Pkl file {}.", .path.display()))]
     PklEvalFailed {
         path: PathBuf,
         #[source]
@@ -114,16 +130,23 @@ pub enum ConfigError {
 
     #[cfg(feature = "pkl")]
     #[diagnostic(code(config::pkl::binary_required))]
-    #[error(
+    #[cfg_attr(feature = "color", error(
         "Pkl configuration requires the {} binary to be installed and available.\nLearn more: {}",
         "pkl".style(Style::Shell),
-        "https://pkl-lang.org/main/current/pkl-cli/index.html".style(Style::Url)
+        "https://pkl-lang.org/main/current/pkl-cli/index.html".style(Style::Url),
+    ))]
+    #[cfg_attr(
+        not(feature = "color"),
+        error(
+            "Pkl configuration requires the pkl binary to be installed and available.\nLearn more: https://pkl-lang.org/main/current/pkl-cli/index.html",
+        )
     )]
     PklRequired,
 
     // Parser
     #[diagnostic(code(config::parse::failed))]
-    #[error("Failed to parse {}.", .location.style(Style::File))]
+    #[cfg_attr(feature = "color", error("Failed to parse {}.", .location.style(Style::File)))]
+    #[cfg_attr(not(feature = "color"), error("Failed to parse {}.", .location))]
     Parser {
         location: String,
 
@@ -138,7 +161,8 @@ pub enum ConfigError {
     // Validator
     #[cfg(feature = "validate")]
     #[diagnostic(code(config::validate::failed))]
-    #[error("Failed to validate {}.", .location.style(Style::File))]
+    #[cfg_attr(feature = "color", error("Failed to validate {}.", .location.style(Style::File)))]
+    #[cfg_attr(not(feature = "color"), error("Failed to validate {}.", .location))]
     Validator {
         location: String,
 

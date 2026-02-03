@@ -67,12 +67,9 @@ serde_norway = { workspace = true, optional = true }
 reqwest = { workspace = true, optional = true, features = ["blocking"] }
 
 [features]
-default = ["config", "env", "extends", "validate"]
-config = [
-  "dep:serde_path_to_error",
-  "dep:starbase_styles",
-  "schematic_macros/config",
-]
+default = ["config", "color", "env", "extends", "validate"]
+config = ["dep:serde_path_to_error", "schematic_macros/config"]
+color = ["dep:starbase_styles"]
 schema = ["dep:convert_case", "dep:indexmap", "schematic_macros/schema"]
 schema_serde = ["schema", "schematic_types/serde"]
 tracing = ["schematic_macros/tracing"]

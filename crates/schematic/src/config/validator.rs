@@ -1,5 +1,6 @@
 use super::path::{Path, PathSegment};
 use miette::Diagnostic;
+#[cfg(feature = "color")]
 use starbase_styles::{Style, Stylize};
 use std::borrow::Borrow;
 use thiserror::Error;
@@ -13,7 +14,8 @@ pub type Validator<Val, Data, Ctx> = Box<dyn FnOnce(&Val, &Data, &Ctx, bool) -> 
 
 /// Error for a single validation failure.
 #[derive(Clone, Debug, Diagnostic, Error)]
-#[error("{}{} {message}", .path.to_string().style(Style::Id), ":".style(Style::MutedLight))]
+#[cfg_attr(feature = "color", error("{}{} {message}", .path.to_string().style(Style::Id), ":".style(Style::MutedLight)))]
+#[cfg_attr(not(feature = "color"), error("{path}: {message}"))]
 pub struct ValidateError {
     /// Failure message.
     pub message: String,

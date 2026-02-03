@@ -26,7 +26,7 @@ pub mod schema;
 pub mod validate;
 
 /// ASCII color helpers for use within error messages.
-#[cfg(feature = "config")]
+#[cfg(all(feature = "config", feature = "color"))]
 pub use starbase_styles::color;
 
 #[cfg(feature = "config")]

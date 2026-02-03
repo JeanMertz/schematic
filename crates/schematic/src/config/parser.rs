@@ -1,4 +1,5 @@
 use miette::{Diagnostic, NamedSource, SourceSpan};
+#[cfg(feature = "color")]
 use starbase_styles::{Style, Stylize};
 use std::borrow::Borrow;
 use thiserror::Error;
@@ -22,7 +23,8 @@ impl ParseError {
 
 /// Error related to serde parsing.
 #[derive(Debug, Diagnostic, Error)]
-#[error("{}{} {message}", .path.style(Style::Id), ":".style(Style::MutedLight))]
+#[cfg_attr(feature = "color", error("{}{} {message}", .path.style(Style::Id), ":".style(Style::MutedLight)))]
+#[cfg_attr(not(feature = "color"), error("{path}: {message}"))]
 #[diagnostic(severity(Error))]
 pub struct ParserError {
     /// Source code snippet related to the error.

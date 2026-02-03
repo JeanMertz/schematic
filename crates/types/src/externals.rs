@@ -182,29 +182,6 @@ mod serde_yaml_feature {
     }
 }
 
-#[cfg(feature = "serde_yaml_norway")]
-mod serde_yaml_normay_feature {
-    use super::*;
-
-    impl_unknown!(serde_norway::Value);
-
-    // This isn't accurate since we can't access the `N` enum
-    impl Schematic for serde_norway::Number {
-        fn build_schema(mut schema: SchemaBuilder) -> Schema {
-            schema.integer(IntegerType::new_kind(IntegerKind::I64))
-        }
-    }
-
-    impl Schematic for serde_norway::Mapping {
-        fn build_schema(mut schema: SchemaBuilder) -> Schema {
-            schema.object(ObjectType::new(
-                schema.infer::<serde_norway::Value>(),
-                schema.infer::<serde_norway::Value>(),
-            ))
-        }
-    }
-}
-
 #[cfg(feature = "url")]
 mod url_feature {
     use super::*;

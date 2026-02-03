@@ -76,7 +76,7 @@ struct GenConfig {
     version_req: semver::VersionReq,
     json_value: serde_json::Value,
     toml_value: Option<toml::Value>,
-    yaml_value: serde_norway::Value,
+    yaml_value: serde_yaml::Value,
     indexmap: IndexMap<String, String>,
     indexset: Option<IndexSet<String>>,
 }

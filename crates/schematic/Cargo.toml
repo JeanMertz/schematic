@@ -61,7 +61,7 @@ ron = { workspace = true, optional = true }
 toml = { workspace = true, optional = true }
 
 # yaml
-serde_norway = { workspace = true, optional = true }
+serde_yaml = { workspace = true, optional = true }
 
 # url
 reqwest = { workspace = true, optional = true, features = ["blocking"] }
@@ -89,7 +89,7 @@ json = [
 pkl = ["dep:rpkl", "schematic_types/serde_rpkl"]
 ron = ["dep:ron", "schematic_types/serde_ron"]
 toml = ["dep:toml", "schematic_types/serde_toml"]
-yaml = ["dep:serde_norway", "schematic_types/serde_yaml_norway"]
+yaml = ["dep:serde_yaml", "schematic_types/serde_yaml"]
 
 # Renderers
 renderer_json_schema = ["json", "schema", "dep:markdown", "dep:schemars"]

@@ -4,7 +4,7 @@ use crate::config::parser::ParserError;
 use crate::config::source::*;
 use miette::NamedSource;
 use serde::de::{DeserializeOwned, IntoDeserializer};
-use serde_norway::{Deserializer, Error, Value};
+use serde_yaml::{Deserializer, Error, Value};
 use std::path::Path;
 
 #[derive(Default)]

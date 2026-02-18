@@ -49,7 +49,7 @@ serde_json = { workspace = true, optional = true, features = [
 
 # json schema
 markdown = { version = "1", optional = true }
-schemars = { version = "1", optional = true, default-features = false }
+schemars = { version = "0.8.22", optional = true, default-features = false }
 
 # pkl
 rpkl = { workspace = true, optional = true }

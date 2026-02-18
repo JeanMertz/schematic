@@ -245,8 +245,8 @@ impl TemplateContext {
     }
 
     pub fn resolve_schema(&self, initial: &Schema, schemas: &IndexMap<String, Schema>) -> Schema {
-        if let SchemaType::Reference(name) = &initial.ty {
-            if let Some(schema) = schemas.get(name) {
+        if let SchemaType::Reference(ty) = &initial.ty {
+            if let Some(schema) = schemas.get(&ty.name) {
                 return schema.to_owned();
             }
         }

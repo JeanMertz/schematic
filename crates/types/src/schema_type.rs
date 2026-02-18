@@ -12,6 +12,18 @@ use crate::tuples::*;
 use crate::unions::*;
 use std::fmt;
 
+#[derive(Clone, Debug, Default, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
+pub struct ReferenceType {
+    pub name: String,
+}
+
+impl fmt::Display for ReferenceType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.name)
+    }
+}
+
 /// All possible types within a schema.
 #[derive(Clone, Debug, Default, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
@@ -27,7 +39,7 @@ pub enum SchemaType {
     Integer(Box<IntegerType>),
     Literal(Box<LiteralType>),
     Object(Box<ObjectType>),
-    Reference(String),
+    Reference(Box<ReferenceType>),
     Struct(Box<StructType>),
     String(Box<StringType>),
     Tuple(Box<TupleType>),

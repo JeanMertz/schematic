@@ -54,30 +54,50 @@ impl Schematic for () {
 }
 
 impl<T: Schematic> Schematic for &T {
+    fn schema_name() -> Option<String> {
+        T::schema_name()
+    }
+
     fn build_schema(schema: SchemaBuilder) -> Schema {
         T::build_schema(schema)
     }
 }
 
 impl<T: Schematic> Schematic for &mut T {
+    fn schema_name() -> Option<String> {
+        T::schema_name()
+    }
+
     fn build_schema(schema: SchemaBuilder) -> Schema {
         T::build_schema(schema)
     }
 }
 
 impl<T: Schematic> Schematic for Box<T> {
+    fn schema_name() -> Option<String> {
+        T::schema_name()
+    }
+
     fn build_schema(schema: SchemaBuilder) -> Schema {
         T::build_schema(schema)
     }
 }
 
 impl<T: Schematic> Schematic for Rc<T> {
+    fn schema_name() -> Option<String> {
+        T::schema_name()
+    }
+
     fn build_schema(schema: SchemaBuilder) -> Schema {
         T::build_schema(schema)
     }
 }
 
 impl<T: Schematic> Schematic for Arc<T> {
+    fn schema_name() -> Option<String> {
+        T::schema_name()
+    }
+
     fn build_schema(schema: SchemaBuilder) -> Schema {
         T::build_schema(schema)
     }

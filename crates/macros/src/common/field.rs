@@ -19,7 +19,6 @@ pub struct FieldSerdeArgs {
     pub skip: bool,
     pub skip_deserializing: bool,
     pub skip_serializing: bool,
-    pub skip_serializing_if: Option<String>,
 
     // variant
     pub untagged: bool,
@@ -234,14 +233,9 @@ impl Field<'_> {
         }
 
         if !skipped {
-            if let Some(skip_serializing_if) = self
-                .args
-                .skip_serializing_if
-                .as_ref()
-                .or(self.serde_args.skip_serializing_if.as_ref())
-                .cloned()
-            {
-                meta.push(quote! { skip_serializing_if = #skip_serializing_if });
+            if let Some(skip_serializing_if) = self.args.skip_serializing_if.clone() {
+                meta.push(quote! {
+                skip_serializing_if = #skip_serializing_if });
             } else if self.args.skip_serializing || self.serde_args.skip_serializing {
                 meta.push(quote! { skip_serializing });
             } else {

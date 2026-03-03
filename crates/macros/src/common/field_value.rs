@@ -223,10 +223,15 @@ impl ToTokens for FieldValue<'_> {
                 }
             }
             Self::NestedValue { value, info } => {
-                if info.optional {
-                    quote! { Option<<#value as schematic::Config>::Partial> }
+                let partial = if info.boxed {
+                    quote! { Box<<#value as schematic::Config>::Partial> }
                 } else {
                     quote! { <#value as schematic::Config>::Partial }
+                };
+                if info.optional {
+                    quote! { Option<#partial> }
+                } else {
+                    partial
                 }
             }
             Self::Value { value, .. } => {

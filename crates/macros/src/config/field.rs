@@ -76,10 +76,14 @@ impl Field<'_> {
                         Some(field.map_data(quote! { value.finalize(context)? })),
                         collection_info.optional,
                     ),
-                    FieldValue::NestedValue { info, .. } => (
-                        Some(field.map_data(quote! { data.finalize(context)? })),
-                        info.optional,
-                    ),
+                    FieldValue::NestedValue { info, .. } => {
+                        let finalized = if info.boxed {
+                            quote! { Box::new((*data).finalize(context)?) }
+                        } else {
+                            quote! { data.finalize(context)? }
+                        };
+                        (Some(field.map_data(finalized)), info.optional)
+                    }
                     FieldValue::Value { .. } => unreachable!(),
                 };
 

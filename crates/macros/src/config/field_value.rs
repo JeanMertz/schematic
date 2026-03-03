@@ -85,10 +85,15 @@ impl FieldValue<'_> {
                 if nullable {
                     quote! { None }
                 } else if nested {
-                    if required {
+                    let default = if required {
                         quote! { #value::default() }
                     } else {
                         quote! { #value::default_values(context)?.unwrap_or_default() }
+                    };
+                    if matches!(self, Self::NestedValue { info, .. } if info.boxed) {
+                        quote! { Box::new(#default) }
+                    } else {
+                        default
                     }
                 } else if required {
                     quote! { None }
@@ -105,7 +110,12 @@ impl FieldValue<'_> {
                 let partial_name = format_ident!("Partial{}", info.config.as_ref().unwrap());
 
                 Some(if info.optional {
-                    quote! { track_env(#partial_name::env_values()?, &mut tracker) }
+                    let value = quote! { track_env(#partial_name::env_values()?, &mut tracker) };
+                    if info.boxed {
+                        quote! { #value.map(Box::new) }
+                    } else {
+                        value
+                    }
                 } else {
                     quote! { track_env(#partial_name::env_values()?, &mut tracker).unwrap_or_default() }
                 })
@@ -146,9 +156,9 @@ impl FieldValue<'_> {
             ),
             Self::NestedValue { info, .. } => {
                 let config = info.config.as_ref();
-
+                let data = if info.boxed { quote! { *data } } else { quote! { data } };
                 quote! {
-                    #config::from_partial(data, { let mut fields = fields.clone(); fields.push(#field.to_owned()); fields })?
+                    #config::from_partial(#data, { let mut fields = fields.clone(); fields.push(#field.to_owned()); fields })?
                 }
             }
             Self::Value { .. } => quote! { data },
@@ -181,12 +191,22 @@ impl FieldValue<'_> {
                 }
                 _ => {
                     if info.optional {
-                        quote! {
-                            self.#key = merge_nested_optional_setting(
-                                self.#key.take(),
-                                next.#key.take(),
-                                context,
-                            )?;
+                        if info.boxed {
+                            quote! {
+                                self.#key = merge_nested_optional_setting(
+                                    self.#key.take().map(|v| *v),
+                                    next.#key.take().map(|v| *v),
+                                    context,
+                                )?.map(Box::new);
+                            }
+                        } else {
+                            quote! {
+                                self.#key = merge_nested_optional_setting(
+                                    self.#key.take(),
+                                    next.#key.take(),
+                                    context,
+                                )?;
+                            }
                         }
                     } else {
                         quote! {

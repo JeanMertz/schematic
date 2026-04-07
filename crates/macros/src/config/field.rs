@@ -149,6 +149,10 @@ impl Field<'_> {
         } else {
             let mut value = self.value_type.get_from_partial_value(key_quoted);
 
+            if self.args.partial_via.is_some() {
+                value = quote! { Into::into(#value) };
+            }
+
             if self.value_type.is_outer_boxed() {
                 value = quote! { Box::new(#value) };
             }

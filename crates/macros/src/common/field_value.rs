@@ -15,7 +15,7 @@ pub struct TypeInfo {
     pub config: Option<Ident>,
 }
 
-fn extract_inner_type<'a>(ty: &'a Type, info: &mut TypeInfo) -> &'a Type {
+pub fn extract_inner_type<'a>(ty: &'a Type, info: &mut TypeInfo) -> &'a Type {
     // We don't need to traverse other types, just paths
     let Type::Path(type_path) = ty else {
         return ty;
@@ -59,36 +59,36 @@ fn extract_inner_type<'a>(ty: &'a Type, info: &mut TypeInfo) -> &'a Type {
 }
 
 #[derive(Debug)]
-pub enum FieldValue<'l> {
+pub enum FieldValue {
     // Vec<item>
     NestedList {
-        collection: &'l Ident,
+        collection: Ident,
         collection_info: TypeInfo,
-        item: &'l Type,
+        item: Type,
         item_info: TypeInfo,
     },
     // HashMap<key, value>
     NestedMap {
-        collection: &'l Ident,
+        collection: Ident,
         collection_info: TypeInfo,
-        key: &'l Type,
-        value: &'l Type,
+        key: Type,
+        value: Type,
         value_info: TypeInfo,
     },
     // config
     NestedValue {
         info: TypeInfo,
-        value: &'l Type,
+        value: Type,
     },
     // value
     Value {
         info: TypeInfo,
-        value: &'l Type,
+        value: Type,
     },
 }
 
-impl<'l> FieldValue<'l> {
-    pub fn nested(raw: &'l Type) -> FieldValue<'l> {
+impl FieldValue {
+    pub fn nested(raw: &Type) -> FieldValue {
         let mut outer_info = TypeInfo::default();
         let ty = extract_inner_type(raw, &mut outer_info);
 
@@ -112,9 +112,9 @@ impl<'l> FieldValue<'l> {
             let item = extract_inner_type(inner_ty, &mut inner_info);
 
             Self::NestedList {
-                collection: &segment.ident,
+                collection: segment.ident.clone(),
                 collection_info: outer_info,
-                item,
+                item: item.clone(),
                 item_info: inner_info,
             }
         } else if name.ends_with("Map") {
@@ -134,23 +134,23 @@ impl<'l> FieldValue<'l> {
             let value = extract_inner_type(value_ty, &mut inner_info);
 
             Self::NestedMap {
-                collection: &segment.ident,
+                collection: segment.ident.clone(),
                 collection_info: outer_info,
-                key: key_ty,
-                value,
+                key: key_ty.clone(),
+                value: value.clone(),
                 value_info: inner_info,
             }
         } else {
             Self::NestedValue {
                 info: outer_info,
-                value: ty,
+                value: ty.clone(),
             }
         }
     }
 
-    pub fn value(raw: &'l Type) -> FieldValue<'l> {
+    pub fn value(raw: &Type) -> FieldValue {
         let mut info = TypeInfo::default();
-        let value = extract_inner_type(raw, &mut info);
+        let value = extract_inner_type(raw, &mut info).clone();
 
         Self::Value { info, value }
     }
@@ -181,7 +181,7 @@ impl<'l> FieldValue<'l> {
         }
     }
 
-    pub fn get_config_type(&self) -> &'l Type {
+    pub fn get_config_type(&self) -> &Type {
         match self {
             Self::NestedList { item, .. } => item,
             Self::NestedMap { value, .. } => value,
@@ -191,7 +191,7 @@ impl<'l> FieldValue<'l> {
     }
 
     #[cfg(feature = "extends")]
-    pub fn get_inner_type(&self) -> Option<&'l Type> {
+    pub fn get_inner_type(&self) -> Option<&Type> {
         match self {
             Self::Value { value, .. } => Some(value),
             _ => None,
@@ -204,7 +204,7 @@ impl<'l> FieldValue<'l> {
 }
 
 // Only used for partials!!!
-impl ToTokens for FieldValue<'_> {
+impl ToTokens for FieldValue {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         tokens.extend(match self {
             Self::NestedList {

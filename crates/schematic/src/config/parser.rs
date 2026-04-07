@@ -1,3 +1,5 @@
+#![allow(unused_assignments)]
+
 use miette::{Diagnostic, NamedSource, SourceSpan};
 #[cfg(feature = "color")]
 use starbase_styles::{Style, Stylize};

@@ -1,5 +1,7 @@
 use crate::common::FieldValue;
 use crate::common::PartialAttr;
+use crate::common::TypeInfo;
+use crate::common::extract_inner_type;
 use crate::common::macros::ContainerSerdeArgs;
 use crate::utils::{extract_common_attrs, format_case, preserve_str_literal};
 use darling::FromAttributes;
@@ -56,6 +58,7 @@ pub struct FieldArgs {
     pub validate: Option<Expr>,
     pub partial: PartialAttr,
     pub is_empty: Option<ExprPath>,
+    pub partial_via: Option<ExprPath>,
 
     // serde
     pub alias: Option<String>,
@@ -76,8 +79,9 @@ pub struct Field<'l> {
     pub name: Option<&'l Ident>, // Named
     pub index: usize,            // Unnamed
     pub value: &'l Type,
-    pub value_type: FieldValue<'l>,
+    pub value_type: FieldValue,
     pub env_prefix: Option<String>,
+    pub partial_via_ty: Option<Type>, // owns the via type so FieldValue can borrow it
 }
 
 impl Field<'_> {
@@ -85,21 +89,60 @@ impl Field<'_> {
         let args = FieldArgs::from_attributes(&field.attrs).unwrap_or_default();
         let serde_args = FieldSerdeArgs::from_attributes(&field.attrs).unwrap_or_default();
 
-        Field {
+        let partial_via_ty = args.partial_via.as_ref().map(|ep| {
+            Type::Path(syn::TypePath {
+                qself: ep.qself.clone(),
+                path: ep.path.clone(),
+            })
+        });
+
+        // Can't construct value_type yet — need to borrow from partial_via_ty
+        // after it's stored in the struct. Build a temporary Field first, then
+        // set value_type.
+
+        let mut result = Field {
             name: field.ident.as_ref(),
             index: 0,
             attrs: extract_common_attrs(&field.attrs),
             casing_format: String::new(),
             value: &field.ty,
-            value_type: if args.nested {
-                FieldValue::nested(&field.ty)
-            } else {
-                FieldValue::value(&field.ty)
-            },
+            value_type: FieldValue::value(&field.ty), // placeholder
             args,
             serde_args,
             env_prefix: None,
-        }
+            partial_via_ty,
+        };
+
+        result.value_type = if result.args.nested {
+            let raw_ty = result.partial_via_ty.as_ref().unwrap_or(result.value);
+            let mut value_type = FieldValue::nested(raw_ty);
+
+            if result.partial_via_ty.is_some() {
+                let mut field_info = TypeInfo::default();
+                extract_inner_type(result.value, &mut field_info);
+                match &mut value_type {
+                    FieldValue::NestedValue { info, .. } => {
+                        info.optional = field_info.optional;
+                        info.boxed = field_info.boxed;
+                    }
+                    FieldValue::NestedList {
+                        collection_info, ..
+                    }
+                    | FieldValue::NestedMap {
+                        collection_info, ..
+                    } => {
+                        collection_info.optional = field_info.optional;
+                        collection_info.boxed = field_info.boxed;
+                    }
+                    _ => {}
+                }
+            }
+            value_type
+        } else {
+            FieldValue::value(result.value)
+        };
+
+        result
     }
 
     #[cfg(feature = "schema")]

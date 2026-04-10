@@ -69,8 +69,36 @@ impl Field<'_> {
                 let (value, nullable) = match field {
                     FieldValue::NestedList {
                         collection_info, ..
+                    } => {
+                        // Without a transform, finalize items in-place via
+                        // DerefMut so the collection wrapper's metadata is
+                        // preserved (e.g. MergeableVec variant/strategy).
+                        if func.is_none() {
+                            let stmt = quote! {
+                                let inner: &mut Vec<_> = &mut partial.#key;
+                                let taken = std::mem::take(inner);
+                                let mut finalized = Vec::with_capacity(taken.len());
+                                for value in taken {
+                                    finalized.push(value.finalize(context)?);
+                                }
+                                *inner = finalized;
+                            };
+                            return if collection_info.optional {
+                                quote! {
+                                    if partial.#key.is_some() {
+                                        #stmt
+                                    }
+                                }
+                            } else {
+                                stmt
+                            };
+                        }
+                        (
+                            Some(field.map_data(quote! { value.finalize(context)? })),
+                            collection_info.optional,
+                        )
                     }
-                    | FieldValue::NestedMap {
+                    FieldValue::NestedMap {
                         collection_info, ..
                     } => (
                         Some(field.map_data(quote! { value.finalize(context)? })),

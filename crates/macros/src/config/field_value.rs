@@ -313,11 +313,16 @@ impl FieldValue {
     pub fn map_data(&self, mapped_data: TokenStream) -> TokenStream {
         match self {
             Self::NestedList { collection, .. } => {
+                let method = if collection.to_string().ends_with("Set") {
+                    quote! { insert }
+                } else {
+                    quote! { push }
+                };
                 quote! {
                     {
                         let mut result = #collection::default();
                         for value in data {
-                            result.push(#mapped_data);
+                            result.#method(#mapped_data);
                         }
                         result
                     }

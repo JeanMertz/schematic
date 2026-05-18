@@ -303,13 +303,6 @@ impl Field<'_> {
             })
     }
 
-    fn get_field_key_string(&self) -> String {
-        self.name
-            .as_ref()
-            .map(|name| name.to_string())
-            .unwrap_or_else(|| self.index.to_string())
-    }
-
     fn get_path_segment(&self) -> String {
         if self.name.is_some() {
             self.get_name(Some(&self.casing_format))

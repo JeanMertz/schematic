@@ -137,12 +137,23 @@ impl FieldValue {
     }
 
     pub fn get_from_partial_value(&self, field: String) -> TokenStream {
+        let push_field = if field.is_empty() {
+            quote! {}
+        } else {
+            quote! { fields.push(#field.to_owned()); }
+        };
+
         match self {
             Self::NestedList {
                 item, item_info, ..
             } => self.map_data_with_info(
                 quote! {
-                    #item::from_partial(value, { let mut fields = fields.clone(); fields.push(#field.to_owned()); fields })?
+                    #item::from_partial(value, {
+                        let mut fields = fields.clone();
+                        #push_field
+                        fields.push(index.to_string());
+                        fields
+                    })?
                 },
                 item_info,
             ),
@@ -150,15 +161,28 @@ impl FieldValue {
                 value, value_info, ..
             } => self.map_data_with_info(
                 quote! {
-                    #value::from_partial(value, { let mut fields = fields.clone(); fields.push(#field.to_owned()); fields })?
+                    #value::from_partial(value, {
+                        let mut fields = fields.clone();
+                        #push_field
+                        fields.push(key.to_string());
+                        fields
+                    })?
                 },
                 value_info,
             ),
             Self::NestedValue { info, .. } => {
                 let config = info.config.as_ref();
-                let data = if info.boxed { quote! { *data } } else { quote! { data } };
+                let data = if info.boxed {
+                    quote! { *data }
+                } else {
+                    quote! { data }
+                };
                 quote! {
-                    #config::from_partial(#data, { let mut fields = fields.clone(); fields.push(#field.to_owned()); fields })?
+                    #config::from_partial(#data, {
+                        let mut fields = fields.clone();
+                        #push_field
+                        fields
+                    })?
                 }
             }
             Self::Value { .. } => quote! { data },
@@ -321,8 +345,9 @@ impl FieldValue {
                 quote! {
                     {
                         let mut result = #collection::default();
-                        for value in data {
-                            result.#method(#mapped_data);
+                        for (index, value) in data.into_iter().enumerate() {
+                            let entry = #mapped_data;
+                            result.#method(entry);
                         }
                         result
                     }
@@ -333,7 +358,8 @@ impl FieldValue {
                     {
                         let mut result = #collection::default();
                         for (key, value) in data {
-                            result.insert(key, #mapped_data);
+                            let entry = #mapped_data;
+                            result.insert(key, entry);
                         }
                         result
                     }

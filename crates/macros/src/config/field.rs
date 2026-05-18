@@ -146,7 +146,7 @@ impl Field<'_> {
 
     pub fn generate_from_partial_value(&self) -> TokenStream {
         let key = self.get_field_key();
-        let key_quoted = self.get_field_key_string();
+        let key_quoted = self.get_path_segment();
 
         #[allow(clippy::collapsible_else_if)]
         if matches!(self.value_type, FieldValue::Value { .. }) {
@@ -175,7 +175,12 @@ impl Field<'_> {
                 }
             }
         } else {
-            let mut value = self.value_type.get_from_partial_value(key_quoted);
+            let segment = if self.args.flatten || self.serde_args.flatten {
+                String::new()
+            } else {
+                key_quoted
+            };
+            let mut value = self.value_type.get_from_partial_value(segment);
 
             if self.args.partial_via.is_some() {
                 value = quote! { Into::into(#value) };
@@ -218,7 +223,7 @@ impl Field<'_> {
 
     pub fn generate_validate_statement(&self) -> TokenStream {
         let key = self.get_field_key();
-        let key_quoted = self.get_field_key_string();
+        let key_quoted = self.get_path_segment();
         let mut stmts = vec![];
 
         #[cfg(feature = "validate")]
@@ -303,6 +308,14 @@ impl Field<'_> {
             .as_ref()
             .map(|name| name.to_string())
             .unwrap_or_else(|| self.index.to_string())
+    }
+
+    fn get_path_segment(&self) -> String {
+        if self.name.is_some() {
+            self.get_name(Some(&self.casing_format))
+        } else {
+            self.index.to_string()
+        }
     }
 }
 
